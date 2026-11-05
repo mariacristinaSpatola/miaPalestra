@@ -1,0 +1,267 @@
+
+1.  OBIETTIVO
+
+Realizzare una application Java REstfull per la gestione delle lezioni e
+delle prenotazioni di una palestra. I corsi iniziali comprendono Yoga,
+Pilates e Acquagym.
+
+Il sistema deve permettere: - all’amministratore di gestire corsi,
+programmazione settimanale e singole lezioni; - ai clienti registrati di
+consultare e prenotare le lezioni tramite il sito; - ai clienti di
+utilizzare un chatbot AI per richiedere prenotazioni in linguaggio
+naturale; - alla segreteria di inserire e annullare prenotazioni per
+conto dei clienti; - di calcolare automaticamente i posti disponibili; -
+di rendere prenotabili le lezioni nei successivi 15 giorni.
+Inoltre precisiamo che:
+1. è possibile prenotare 2 ore prima se orario dopo le 12 , il giorno prima se orario prima delle 12
+2. è possibile annullare 2 ore prima se orario dopo le 12 , il giorno prima se orario prima delle 12
+3. Il cliente può prenotare più lezioni nello stesso giorno 
+5. Il cliente può prenotare  lo stesso corso in date diverse
+6. Come avvisare i clienti quando una lezione viene annullata sarà oggetto di analisi successiva
+7. Non Sono necessarie conferme via email o altri canali per la prenotazione
+8. Il chatbot sarà solo nel sito autenticato e non su canali esterni
+
+Scelte confermate: - Java 26; - Spring Boot  e Maven; - Spring MVC,
+Spring Data JPA e Hibernate; - database H2 in modalità file; - Spring
+Security; - Api Restfull - front-end Angular - chatbot AI tramite Spring AI e
+provider configurabile; - programmazione settimanale con eccezioni sulle
+singole date; - capienza modificabile per singola occorrenza; - utenti:
+amministratore, segreteria e clienti autenticati.
+
+IMPORTANTE: non è prevista la storicizzazione delle prenotazioni tramite
+tabella di audit. La tabella Prenotazioni conserva lo stato corrente della
+prenotazione. Una prenotazione annullata rimane con stato CANCELLED; non
+vengono registrate versioni, cronologia delle modifiche o dettagli delle
+operazioni effettuate nel tempo.
+
+2.  RUOLI E PERMESSI
+
+ADMIN - Gestisce corsi e programmazione settimanale. - Consulta tutte le
+lezioni e le prenotazioni. - Modifica capienza e orario di una singola
+lezione. - Annulla una singola lezione. - Gestisce gli utenti e i ruoli
+secondo le funzioni previste.
+
+SECRETARY - Cerca i clienti. - Consulta lezioni e disponibilità. -
+Inserisce e annulla prenotazioni per conto dei clienti. - Consulta le
+prenotazioni giornaliere.
+
+CUSTOMER - Accede alla propria area riservata. - Consulta le lezioni
+prenotabili. - Prenota per sé tramite sito o chatbot. - Consulta e
+annulla le proprie prenotazioni, nel rispetto delle regole definite.
+
+I permessi devono essere verificati nel backend su ogni endpoint, non
+soltanto nascondendo le funzioni nell’interfaccia.
+
+3.  MODELLO DATI
+
+Sono previste cinque tabelle principali: Utenti, Corsi,
+Programma_Settimanale, Agenda_Corsi e Prenotazioni. Non viene creata
+una storicizzazione delle programmazioni.
+
+3.1 Utenti Contiene gli account. Campi: - ID: chiave primaria; -
+USERNAME: obbligatorio e univoco; - PASSWORD: hash BCrypt, mai testo in
+chiaro; - FIRST_NAME, LAST_NAME; - EMAIL: univoca se valorizzata; -
+PHONE; - ROLE: ADMIN, SECRETARY o CUSTOMER; - ACTIVE; - CREATED_AT.
+
+3.2 Corsi Contiene le tipologie di corso. Campi: - ID; - NAME:
+obbligatorio e univoco; - DESCRIPTION; - ACTIVE.
+
+Un corso disattivato non genera nuove occorrenze. La disattivazione non
+cancella lezioni o prenotazioni già presenti.
+
+3.3 Programma_Settimanale Definisce una programmazione ricorrente: corso,
+giorno, orario e capienza predefinita. Campi: - ID; - Corsi_ID:
+riferimento a Corsi; - DAY_OF_WEEK: 1=lunedì, 7=domenica secondo ISO; -
+START_TIME; - DEFAULT_CAPACITY; - VALID_FROM; - VALID_TO: facoltativo; -
+ACTIVE.
+
+Esempi: - Acquagym, lunedì, 12:30, 20 posti; - Acquagym, lunedì, 18:00,
+14 posti; - Yoga, lunedì, 09:00, 15 posti.
+
+Le programmazioni devono essere controllate per evitare duplicati e
+sovrapposizioni involontarie. Una modifica stabile della programmazione
+deve avere una data di decorrenza: si chiude la validità della vecchia
+regola e se ne crea una nuova. Le occorrenze già generate non devono
+essere sovrascritte.
+
+3.4 Agenda_Corsi Rappresenta una lezione effettiva in una data
+precisa. È la tabella usata per disponibilità e prenotazioni. Campi: -
+ID; - Programma_Settimanale_ID; - LESSON_DATE; - START_TIME: orario effettivo,
+modificabile per singola data; - CAPACITY: capienza effettiva,
+modificabile per singola data; - STATUS: SCHEDULED oppure CANCELLED.
+
+Regole: - ogni occorrenza deriva da una programmazione settimanale; - la
+capienza e l’orario possono essere modificati per una singola data; -
+una singola occorrenza può essere annullata; - non si generano
+duplicati; - la capienza non può essere ridotta sotto il numero di
+prenotazioni confermate; - una lezione annullata non accetta
+prenotazioni; - modifiche alla programmazione settimanale non
+sovrascrivono occorrenze già create e personalizzate.
+
+Il vincolo univoco iniziale è Programma_Settimanale_ID + LESSON_DATE. Se in
+futuro si dovessero consentire più occorrenze della stessa
+programmazione nello stesso giorno, il modello andrà esteso.
+
+3.5 Prenotazioni Rappresenta la prenotazione corrente di un cliente per una
+singola occorrenza. Campi: - ID; - CUSTOMER_ID: riferimento ad Utenti
+con ruolo CUSTOMER; - OCCURRENCE_ID: riferimento a Agenda_Corsi; -
+STATUS: CONFIRMED oppure CANCELLED; - Prenotazioni_CHANNEL: WEB, CHATBOT
+oppure SECRETARY; - CREATED_BY: utente che ha materialmente inserito la
+prenotazione, se applicabile; - CREATED_AT; - CANCELLED_AT.
+
+Regole: - un cliente può avere un solo record per la stessa
+occorrenza; - una prenotazione CANCELLED non occupa un posto; -
+CUSTOMER_ID + OCCURRENCE_ID è univoco; - il cliente può prenotare solo
+per sé; - segreteria e amministratore possono operare per conto del
+cliente nei limiti dei permessi; - non si registra uno storico delle
+modifiche; - il record annullato resta presente per impedire duplicati e
+consentire una futura riattivazione.
+
+La conservazione del record CANCELLED rappresenta lo stato corrente, non
+uno storico delle operazioni.
+
+4.  RELAZIONI
+
+-   Corsi 1:N Programma_Settimanale.
+-   Programma_Settimanale 1:N Agenda_Corsi.
+-   Utenti 1:N Prenotazioni come cliente.
+-   Utenti 1:N Prenotazioni come utente che ha creato la prenotazione.
+-   Agenda_Corsi 1:N Prenotazioni.
+
+5.  DISPONIBILITÀ E CONCORRENZA
+
+La disponibilità non viene salvata come contatore autonomo. Si calcola
+ogni volta:
+
+POSTI DISPONIBILI = CAPACITY - NUMERO DI Prenotazioni CON STATUS CONFIRMED.
+
+Esempio: capienza 20, prenotazioni confermate 12, posti disponibili 8.
+
+Query di conteggio: SELECT COUNT(*) FROM Prenotazioni WHERE OCCURRENCE_ID = ?
+AND STATUS = ‘CONFIRMED’;
+
+Ogni prenotazione deve essere gestita in una transazione: 1. recuperare
+Agenda_Corsi con lock pessimista PESSIMISTIC_WRITE; 2. verificare
+che lo stato sia SCHEDULED; 3. verificare che la data sia prenotabile;
+4. verificare che il cliente non abbia già una prenotazione confermata;
+5. contare le prenotazioni confermate; 6. confrontare il conteggio con
+CAPACITY; 7. inserire o riattivare la prenotazione; 8. confermare la
+transazione.
+
+Tutti i canali devono utilizzare lo stesso PrenotazioniService. Il vincolo
+univoco deve essere gestito anche in caso di richieste concorrenti.
+
+6.  GENERAZIONE DELLE LEZIONI NEI SUCCESSIVI 15 GIORNI
+
+Un processo automatico genera le occorrenze per i successivi 15 giorni,
+usando il fuso Europe/Rome.
+
+Procedura: 1. calcolare la data odierna e l’intervallo di 15 giorni; 2.
+leggere le programmazioni settimanali attive; 3. individuare le date
+corrispondenti al giorno della settimana; 4. rispettare VALID_FROM e
+VALID_TO; 5. creare le occorrenze mancanti; 6. non duplicare quelle già
+presenti; 7. non sovrascrivere orario, capienza o stato modificati
+manualmente.
+
+La generazione deve essere idempotente: eseguirla più volte non deve
+produrre duplicati né perdere personalizzazioni. Va eseguita all’avvio,
+quotidianamente tramite scheduler e dopo modifiche alla programmazione,
+se necessario.
+
+7.  CHATBOT AI
+
+Il cliente autenticato può scrivere, ad esempio: “Vorrei prenotare
+Acquagym lunedì 9 novembre alle 12:30”.
+
+L’AI estrae corso, data e orario. Il backend: 1. verifica l’identità
+autenticata; 2. normalizza data e orario; 3. cerca le occorrenze; 4.
+chiede chiarimenti se la richiesta è ambigua; 5. verifica la
+disponibilità; 6. comunica i posti disponibili; 7. chiede conferma
+esplicita; 8. richiama PrenotazioniService; 9. comunica l’esito restituito
+dal backend.
+
+Tool applicativi previsti: - cercaCorsi; - cercaLezioni; -
+verificaDisponibilità; - prenotaLezioni; - cancellaPrenotazione; - cercaLeMiePrenotazioni.
+
+L’AI non accede direttamente al database, non inventa disponibilità e
+non dichiara prenotazioni confermate senza esito positivo del backend.
+L’identità del cliente deriva sempre dalla sessione autenticata, mai dal
+testo del messaggio. È richiesta conferma esplicita prima di prenotare o
+annullare.
+
+8.  API REST
+
+7. API REST dell'applicazione
+Predisporrei fin da subito queste API.
+Metodo	Endpoint	Funzione
+GET	/api/courses	Elenco corsi
+POST	/api/admin/courses	Inserimento corso
+PUT	/api/admin/courses/{id}	Modifica corso
+GET	/api/admin/weekly-lessons	Programmazione settimanale
+POST	/api/admin/weekly-lessons	Inserimento orario
+PUT	/api/admin/occurrences/{id}	Modifica singola lezione
+GET	/api/occurrences	Lezioni disponibili
+GET	/api/occurrences/{id}/availability	Disponibilità
+POST	/api/bookings	Nuova prenotazione
+PUT	/api/bookings/{id}/cancel	Annullamento
+GET	/api/customer/bookings	Prenotazioni cliente
+POST	/api/chatbot/message	Messaggio chatbot
+
+Gli endpoint devono usare DTO e non esporre direttamente le entity JPA.
+
+9.  CONFIGURAZIONE H2
+
+Esempio application.properties:
+
+spring.application.name=gym-Prenotazioni server.port=8080
+
+spring.datasource.url=jdbc:h2:file:./data/gymdb;DB_CLOSE_ON_EXIT=FALSE
+spring.datasource.driver-class-name=org.h2.Driver
+spring.datasource.username=sa spring.datasource.password=
+
+spring.jpa.hibernate.ddl-auto=validate spring.jpa.show-sql=true
+spring.jpa.open-in-view=false
+
+spring.sql.init.mode=always
+
+spring.h2.console.enabled=true spring.h2.console.path=/h2-console
+
+spring.jackson.time-zone=Europe/Rome
+
+La console H2 è solo per sviluppo e deve essere disabilitata o protetta
+negli ambienti esposti. Per lo schema si può usare schema.sql e
+validazione Hibernate. Durante le primissime prove è possibile usare
+ddl-auto=update, ma la configurazione stabile deve avere uno schema
+controllato e versionato. Valutare Flyway prima del rilascio.
+
+10. STRUTTURA DEI PACKAGE
+
+src/main/java/it/gym/Prenotazioni/
+
+entity/ - Utenti.java - Corsi.java - ProgrammaSettimanale.java -
+AgendaCorsi.java - Prenotazioni.java
+
+enums/ - UserRole.java - PrenotazioniStatus.java - PrenotazioniChannel.java -
+OccurrenceStatus.java
+
+repository/ - UserRepository.java - CorsiRepository.java -
+WeeklyLessonRepository.java - LessonOccurrenceRepository.java -
+PrenotazioniRepository.java
+
+service/ - UserService.java - CorsiService.java -
+ProgrammaSettimanaleService.java - AgendaCorsiService.java -
+DisponibilitaService.java - PrenotazioniService.java - ChatbotService.java
+
+controller/ - AdminController.java - CorsiController.java -
+ProgrammaSettimanaleController.java - PrenotazioniController.java -
+ClientiController.java - ChatbotController.java
+
+dto/ - PrenotazioniRequest.java - PrenotazioniResponse.java -
+DisponibilitaResponse.java - ChatbotRequest.java - ChatbotResponse.java
+
+security/ - SecurityConfig.java - UtentiDetailsService.java
+
+scheduler/ - CalendarioScheduler.java
+
+src/main/resources/ - application.properties - schema.sql - data.sql -
+templates/ - static/css/ - static/js/ - static/images/
