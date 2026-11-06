@@ -1,6 +1,8 @@
 package it.gym.Prenotazioni.config;
 
 import it.gym.Prenotazioni.repository.UtentiRepository;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -132,5 +134,24 @@ public class SecurityConfiguration {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", cors);
         return source;
+    }
+
+    @Bean
+    OpenAPI customOpenAPI() {
+        return new OpenAPI()
+                .info(new Info()
+                        .title("miaPalestra API")
+                        .version("1.0.0")
+                        .description("""
+                                Backend REST per la gestione di corsi, programmazione, lezioni e prenotazioni della palestra.
+                                
+                                **Autenticazione**: Usa POST /api/auth/login per autenticarti come ADMIN, SECRETARY o CUSTOMER.
+                                Ottieni il token CSRF con GET /api/auth/csrf e includilo nell'header X-CSRF-TOKEN.
+                                
+                                **Ruoli**:
+                                - ADMIN: Gestisce utenti, corsi, programmazioni
+                                - SECRETARY: Gestisce clienti e prenotazioni
+                                - CUSTOMER: Gestisce le proprie prenotazioni
+                                """));
     }
 }
