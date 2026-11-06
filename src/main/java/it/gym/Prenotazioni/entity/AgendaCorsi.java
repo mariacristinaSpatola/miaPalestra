@@ -18,6 +18,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Entity
@@ -91,5 +92,45 @@ public class AgendaCorsi {
 
     public OccurrenceStatus getStatus() {
         return status;
+    }
+
+    public void verificaPrenotabilita(LocalDateTime richiestaIl) {
+        if (status != OccurrenceStatus.SCHEDULED) {
+            throw new RegolaDominioNonValidaException("Non è possibile prenotare una lezione annullata.");
+        }
+        verificaFinestraOperativa(richiestaIl);
+    }
+
+    public void verificaCancellabilita(LocalDateTime richiestaIl) {
+        if (status != OccurrenceStatus.SCHEDULED) {
+            throw new RegolaDominioNonValidaException("Non è possibile cancellare la prenotazione di una lezione annullata.");
+        }
+        verificaFinestraOperativa(richiestaIl);
+    }
+
+    public void verificaPostiDisponibili(long prenotazioniConfermate) {
+        if (prenotazioniConfermate >= capacity) {
+            throw new RegolaDominioNonValidaException("Non ci sono posti disponibili per questa lezione.");
+        }
+    }
+
+    public void annulla() {
+        status = OccurrenceStatus.CANCELLED;
+    }
+
+    private void verificaFinestraOperativa(LocalDateTime richiestaIl) {
+        if (richiestaIl == null) {
+            throw new RegolaDominioNonValidaException("La data della richiesta è obbligatoria.");
+        }
+        LocalDateTime scadenza = startTime.isBefore(LocalTime.NOON)
+                ? lessonDate.atStartOfDay()
+                : lessonDate.atTime(startTime).minusHours(2);
+        boolean richiestaConsentita = startTime.isBefore(LocalTime.NOON)
+                ? richiestaIl.isBefore(scadenza)
+                : !richiestaIl.isAfter(scadenza);
+        if (!richiestaConsentita) {
+            throw new RegolaDominioNonValidaException(
+                    "La finestra per prenotare o cancellare questa lezione è terminata.");
+        }
     }
 }
