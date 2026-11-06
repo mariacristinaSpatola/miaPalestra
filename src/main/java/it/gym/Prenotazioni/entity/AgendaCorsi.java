@@ -1,6 +1,7 @@
 package it.gym.Prenotazioni.entity;
 
 import it.gym.Prenotazioni.enums.OccurrenceStatus;
+import it.gym.Prenotazioni.exception.RegolaDominioNonValidaException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -54,6 +55,13 @@ public class AgendaCorsi {
 
     public AgendaCorsi(ProgrammaSettimanale programmaSettimanale, LocalDate lessonDate, LocalTime startTime,
             int capacity) {
+        if (programmaSettimanale == null || !programmaSettimanale.eValidoIl(lessonDate)) {
+            throw new RegolaDominioNonValidaException(
+                    "La lezione non può essere creata fuori dalla validità di un programma attivo.");
+        }
+        if (startTime == null || capacity < 1) {
+            throw new RegolaDominioNonValidaException("Ora e capienza della lezione sono obbligatorie.");
+        }
         this.programmaSettimanale = programmaSettimanale;
         this.lessonDate = lessonDate;
         this.startTime = startTime;

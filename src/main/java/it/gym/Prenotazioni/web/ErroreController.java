@@ -1,6 +1,10 @@
 package it.gym.Prenotazioni.web;
 
 import it.gym.Prenotazioni.exception.PasswordCorrenteNonValidaException;
+import it.gym.Prenotazioni.exception.CorsoGiaEsistenteException;
+import it.gym.Prenotazioni.exception.CorsoNonTrovatoException;
+import it.gym.Prenotazioni.exception.MiaPalestraException;
+import it.gym.Prenotazioni.exception.ProgrammaSettimanaleNonTrovatoException;
 import it.gym.Prenotazioni.exception.UtenteGiaEsistenteException;
 import it.gym.Prenotazioni.exception.UtenteNonTrovatoException;
 import org.springframework.http.HttpStatus;
@@ -20,9 +24,24 @@ public class ErroreController {
         return errore(HttpStatus.NOT_FOUND, exception.getMessage());
     }
 
+    @ExceptionHandler({CorsoNonTrovatoException.class, ProgrammaSettimanaleNonTrovatoException.class})
+    public ResponseEntity<Map<String, String>> risorsaNonTrovata(MiaPalestraException exception) {
+        return errore(HttpStatus.NOT_FOUND, exception.getMessage());
+    }
+
     @ExceptionHandler(UtenteGiaEsistenteException.class)
     public ResponseEntity<Map<String, String>> giaEsistente(UtenteGiaEsistenteException exception) {
         return errore(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
+    @ExceptionHandler(CorsoGiaEsistenteException.class)
+    public ResponseEntity<Map<String, String>> corsoGiaEsistente(CorsoGiaEsistenteException exception) {
+        return errore(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
+    @ExceptionHandler(MiaPalestraException.class)
+    public ResponseEntity<Map<String, String>> regolaNonValida(MiaPalestraException exception) {
+        return errore(HttpStatus.BAD_REQUEST, exception.getMessage());
     }
 
     @ExceptionHandler(PasswordCorrenteNonValidaException.class)

@@ -169,6 +169,45 @@ class SicurezzaUtentiTests {
         }
 
         @Test
+        void corsiEProgrammiRichiedonoIlRuoloAdmin() throws Exception {
+                MockHttpSession sessioneAdmin = autentica("admin").sessione();
+                MockHttpSession sessioneCliente = autentica("cliente").sessione();
+
+                mockMvc.perform(get("/api/corsi").session(sessioneAdmin))
+                                .andExpect(status().isOk());
+
+                mockMvc.perform(get("/api/corsi").session(sessioneCliente))
+                                .andExpect(status().isForbidden());
+
+                mockMvc.perform(post("/api/corsi")
+                                .session(sessioneCliente)
+                                .header("X-CSRF-TOKEN", tokenCsrf(sessioneCliente))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"nome":"Corso non autorizzato","descrizione":null}
+                                                """))
+                                .andExpect(status().isForbidden());
+
+                mockMvc.perform(get("/api/programmi-settimanali").session(sessioneCliente))
+                                .andExpect(status().isForbidden());
+
+                mockMvc.perform(post("/api/programmi-settimanali")
+                                .session(sessioneAdmin)
+                                .header("X-CSRF-TOKEN", tokenCsrf(sessioneAdmin))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"corsoId":1,"giorno":1,"ora":"09:00:00",
+                                                 "capienzaPredefinita":10,"validoDal":"2026-11-02"}
+                                                """))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.giorno").value(1));
+
+                mockMvc.perform(get("/api/programmi-settimanali").session(sessioneAdmin))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$[0].nomeCorso").exists());
+        }
+
+        @Test
         void customerAccedeSoloAiPropriDatiEIlClientNonPuoCambiareIdentita() throws Exception {
                 MockHttpSession sessione = autentica("cliente").sessione();
                 mockMvc.perform(get("/api/utenti/me").session(sessione))
