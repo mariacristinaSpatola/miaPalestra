@@ -2,6 +2,7 @@ package it.gym.Prenotazioni.entity;
 
 import it.gym.Prenotazioni.enums.PrenotazioniChannel;
 import it.gym.Prenotazioni.enums.PrenotazioniStatus;
+import it.gym.Prenotazioni.exception.RegolaDominioNonValidaException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -67,12 +68,40 @@ public class Prenotazioni {
 
     public Prenotazioni(Utenti customer, AgendaCorsi occurrence, PrenotazioniStatus status,
             PrenotazioniChannel channel, Utenti createdBy) {
+        this(customer, occurrence, status, channel, createdBy,
+                LocalDateTime.now(ZoneId.of("Europe/Rome")));
+    }
+
+    public Prenotazioni(Utenti customer, AgendaCorsi occurrence, PrenotazioniStatus status,
+            PrenotazioniChannel channel, Utenti createdBy, LocalDateTime createdAt) {
         this.customer = customer;
         this.occurrence = occurrence;
         this.status = status;
         this.channel = channel;
         this.createdBy = createdBy;
-        this.createdAt = LocalDateTime.now(ZoneId.of("Europe/Rome"));
+        this.createdAt = createdAt;
+    }
+
+    public void riattiva(PrenotazioniChannel channel, Utenti createdBy) {
+        verificaRiattivabile();
+        this.status = PrenotazioniStatus.CONFIRMED;
+        this.channel = channel;
+        this.createdBy = createdBy;
+        this.cancelledAt = null;
+    }
+
+    public void verificaRiattivabile() {
+        if (status != PrenotazioniStatus.CANCELLED) {
+            throw new RegolaDominioNonValidaException("È possibile riattivare solo una prenotazione cancellata.");
+        }
+    }
+
+    public void cancella(LocalDateTime cancellataIl) {
+        if (status != PrenotazioniStatus.CONFIRMED) {
+            throw new RegolaDominioNonValidaException("La prenotazione non è attiva.");
+        }
+        this.status = PrenotazioniStatus.CANCELLED;
+        this.cancelledAt = cancellataIl;
     }
 
     public Long getId() {
