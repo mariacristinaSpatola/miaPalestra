@@ -46,8 +46,8 @@ public class SecurityConfiguration {
                         .roles(utente.getRole().name())
                         .disabled(!utente.isActive())
                         .build())
-                .orElseThrow(() -> new org.springframework.security.core.userdetails
-                        .UsernameNotFoundException("Credenziali non valide."));
+                .orElseThrow(() -> new org.springframework.security.core.userdetails.UsernameNotFoundException(
+                        "Credenziali non valide."));
     }
 
     @Bean
@@ -99,13 +99,14 @@ public class SecurityConfiguration {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/auth/csrf", "/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/csrf", "/api/auth/login",
+                                "/swagger-ui.html", "/swagger-ui/**",
+                                "/v3/api-docs", "/v3/api-docs/**")
+                        .permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
-                        .authenticationEntryPoint((request, response, exception) ->
-                                response.sendError(401))
-                        .accessDeniedHandler((request, response, exception) ->
-                                response.sendError(403)));
+                        .authenticationEntryPoint((request, response, exception) -> response.sendError(401))
+                        .accessDeniedHandler((request, response, exception) -> response.sendError(403)));
         http.addFilterAfter(new SessionUtenteFilter(utentiRepository),
                 org.springframework.security.web.context.SecurityContextHolderFilter.class);
         return http.build();
