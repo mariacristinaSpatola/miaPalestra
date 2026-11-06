@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,11 +18,13 @@ public class AdminBootstrap implements CommandLineRunner {
 
     private final UtentiRepository utentiRepository;
     private final BootstrapAdminProperties properties;
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
 
-    public AdminBootstrap(UtentiRepository utentiRepository, BootstrapAdminProperties properties) {
+    public AdminBootstrap(UtentiRepository utentiRepository, BootstrapAdminProperties properties,
+            PasswordEncoder passwordEncoder) {
         this.utentiRepository = utentiRepository;
         this.properties = properties;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override

@@ -54,6 +54,13 @@ public class Utenti {
 
     public Utenti(String username, String password, String firstName, String lastName,
             String email, String phone, UserRole role) {
+        validaTestoObbligatorio(username, "Username");
+        validaTestoObbligatorio(password, "Password");
+        validaTestoObbligatorio(firstName, "Nome");
+        validaTestoObbligatorio(lastName, "Cognome");
+        if (role == null) {
+            throw new IllegalArgumentException("Il ruolo dell'utente è obbligatorio.");
+        }
         this.username = username;
         this.password = password;
         this.firstName = firstName;
@@ -103,5 +110,36 @@ public class Utenti {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public void aggiornaDati(String firstName, String lastName, String email, String phone) {
+        validaTestoObbligatorio(firstName, "Nome");
+        validaTestoObbligatorio(lastName, "Cognome");
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.phone = phone;
+    }
+
+    public void cambiaPassword(String password) {
+        validaTestoObbligatorio(password, "Password");
+        this.password = password;
+    }
+
+    public void cambiaRuolo(UserRole role) {
+        if (role == null) {
+            throw new IllegalArgumentException("Il ruolo dell'utente è obbligatorio.");
+        }
+        this.role = role;
+    }
+
+    public void impostaAttivo(boolean active) {
+        this.active = active;
+    }
+
+    private static void validaTestoObbligatorio(String value, String campo) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(campo + " obbligatorio.");
+        }
     }
 }

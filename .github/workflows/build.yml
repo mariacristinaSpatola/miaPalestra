@@ -87,7 +87,7 @@ jobs:
           # JDK Eclipse Temurin. Altri: zulu, corretto, microsoft, oracle.
           distribution: temurin
           # Deve coincidere con <java.version> del pom.xml.
-          java-version: "25"
+          java-version: "26"
           # Salva ~/.m2 tra un'esecuzione e l'altra, con chiave dal pom.xml:
           # le dipendenze non si riscaricano finché il pom non cambia.
           cache: maven
