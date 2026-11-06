@@ -180,6 +180,21 @@ class PrenotazioniServiceTests {
     }
 
     @Test
+    void nonRiattivaUnaPrenotazioneCancellataQuandoNonCiSonoPosti() {
+        Prenotazioni esistente = new Prenotazioni(cliente, lezione, PrenotazioniStatus.CANCELLED,
+                PrenotazioniChannel.CHATBOT, null);
+        when(prenotazioniRepository.findByCustomerIdAndOccurrenceId(ID_CLIENTE, ID_LEZIONE))
+                .thenReturn(Optional.of(esistente));
+        when(prenotazioniRepository.countByOccurrenceIdAndStatus(ID_LEZIONE, PrenotazioniStatus.CONFIRMED))
+                .thenReturn(2L);
+
+        assertThrows(RegolaDominioNonValidaException.class,
+                () -> servizio.prenota(ID_LEZIONE, ID_CLIENTE, PrenotazioniChannel.WEB, null));
+        assertEquals(PrenotazioniStatus.CANCELLED, esistente.getStatus());
+        verify(prenotazioniRepository, never()).saveAndFlush(any(Prenotazioni.class));
+    }
+
+    @Test
     void rifiutaUnSecondoRecordQuandoLaPrenotazioneEsisteGiaConfermata() {
         Prenotazioni esistente = new Prenotazioni(cliente, lezione, PrenotazioniStatus.CONFIRMED,
                 PrenotazioniChannel.WEB, null);
@@ -221,8 +236,12 @@ class PrenotazioniServiceTests {
     @Test
     void accettaLoStessoCorsoInDateDiverse() throws Exception {
         Corsi corso = new Corsi("Corso stesso", null);
-        ProgrammaSettimanale programma = new ProgrammaSettimanale(corso, 1, LocalTime.of(9, 0), 2,
+        ProgrammaSettimanale programma = new ProgrammaSettimanale(corso, LUNEDI.getDayOfWeek().getValue(),
+                LocalTime.of(9, 0), 2,
                 LUNEDI.minusDays(7), null);
+        lezione = new AgendaCorsi(programma, LUNEDI, LocalTime.of(9, 0), 2);
+        impostaId(lezione, ID_LEZIONE);
+        when(agendaRepository.findByIdForUpdate(ID_LEZIONE)).thenReturn(Optional.of(lezione));
         AgendaCorsi lezioneSeguente = new AgendaCorsi(programma, LUNEDI.plusDays(7), LocalTime.of(9, 0), 2);
         impostaId(lezioneSeguente, 103L);
         when(agendaRepository.findByIdForUpdate(103L)).thenReturn(Optional.of(lezioneSeguente));
