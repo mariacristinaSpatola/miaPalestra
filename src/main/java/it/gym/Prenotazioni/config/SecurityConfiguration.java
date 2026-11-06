@@ -87,7 +87,8 @@ public class SecurityConfiguration {
             DaoAuthenticationProvider authenticationProvider,
             CsrfTokenRepository csrfTokenRepository,
             SecurityContextRepository securityContextRepository,
-            CorsConfigurationSource corsConfigurationSource) throws Exception {
+            CorsConfigurationSource corsConfigurationSource,
+            UtentiRepository utentiRepository) throws Exception {
         http
                 .authenticationProvider(authenticationProvider)
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
@@ -105,6 +106,8 @@ public class SecurityConfiguration {
                                 response.sendError(401))
                         .accessDeniedHandler((request, response, exception) ->
                                 response.sendError(403)));
+        http.addFilterAfter(new SessionUtenteFilter(utentiRepository),
+                org.springframework.security.web.context.SecurityContextHolderFilter.class);
         return http.build();
     }
 
@@ -116,6 +119,9 @@ public class SecurityConfiguration {
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
                 .toList();
+        if (origins.contains("*")) {
+            throw new IllegalArgumentException("La configurazione CORS richiede origini esplicite.");
+        }
         cors.setAllowedOrigins(origins);
         cors.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cors.setAllowedHeaders(List.of("Content-Type", "X-CSRF-TOKEN"));

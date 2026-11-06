@@ -26,6 +26,8 @@ public class UtentiService {
     @Transactional
     public Utenti creaUtente(String username, String password, String firstName, String lastName,
             String email, String phone, UserRole role) {
+        validaTestoObbligatorio(username, "Username");
+        validaTestoObbligatorio(password, "Password");
         if (utentiRepository.existsByUsername(username)) {
             throw new UtenteGiaEsistenteException(username);
         }
@@ -94,5 +96,11 @@ public class UtentiService {
     @Transactional
     public void disattivaUtente(Long id) {
         trovaPerId(id).impostaAttivo(false);
+    }
+
+    private void validaTestoObbligatorio(String value, String campo) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(campo + " obbligatorio.");
+        }
     }
 }

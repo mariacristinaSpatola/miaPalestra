@@ -93,6 +93,16 @@ class SicurezzaUtentiTests {
                 .andExpect(jsonPath("$.password").doesNotExist())
                 .andExpect(jsonPath("$.role").value("CUSTOMER"));
 
+        mockMvc.perform(post("/api/utenti")
+                        .session(sessione)
+                        .header("X-CSRF-TOKEN", tokenCsrf(sessione))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"nuovo-cliente","password":"password-nuova",
+                                 "firstName":"Duplicato","lastName":"Cliente","role":"CUSTOMER"}
+                                """))
+                .andExpect(status().isConflict());
+
         mockMvc.perform(get("/api/utenti")
                         .session(sessione))
                 .andExpect(status().isOk())
@@ -138,6 +148,18 @@ class SicurezzaUtentiTests {
     }
 
     @Test
+    void ricercaClientiRichiedeAlmenoDueCaratteri() throws Exception {
+        MockHttpSession sessione = autentica("segretaria").sessione();
+
+        mockMvc.perform(get("/api/utenti/clienti").param("query", "c").session(sessione))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/utenti/clienti").param("query", "cl").session(sessione))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
     void customerAccedeSoloAiPropriDatiEIlClientNonPuoCambiareIdentita() throws Exception {
         MockHttpSession sessione = autentica("cliente").sessione();
         mockMvc.perform(get("/api/utenti/me").session(sessione))
@@ -155,7 +177,7 @@ class SicurezzaUtentiTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"firstName":"NomeNuovo","lastName":"Cliente",
-                                 "username":"admin","role":"ADMIN","active":true}
+                                 "username":"admin","userId":1,"role":"ADMIN","active":true}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("cliente"))
@@ -190,6 +212,63 @@ class SicurezzaUtentiTests {
                         .header("Access-Control-Request-Method", "PATCH"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
                         .header().doesNotExist("Access-Control-Allow-Origin"));
+    }
+
+    @Test
+    void laModificaDelRuoloRevocaLaSessioneConIPrivilegiPrecedenti() throws Exception {
+        MockHttpSession sessione = autentica("admin").sessione();
+        Long adminId = utentiRepository.findByUsername("admin").orElseThrow().getId();
+
+        mockMvc.perform(put("/api/utenti/" + adminId)
+                        .session(sessione)
+                        .header("X-CSRF-TOKEN", tokenCsrf(sessione))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"firstName":"admin","lastName":"Test","role":"SECRETARY"}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/utenti").session(sessione))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void disattivareUnUtenteRevocaLaSuaSessioneAttiva() throws Exception {
+        MockHttpSession sessioneCliente = autentica("cliente").sessione();
+        MockHttpSession sessioneAdmin = autentica("admin").sessione();
+        Long clienteId = utentiRepository.findByUsername("cliente").orElseThrow().getId();
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/utenti/" + clienteId)
+                        .session(sessioneAdmin)
+                        .header("X-CSRF-TOKEN", tokenCsrf(sessioneAdmin)))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/utenti/me").session(sessioneCliente))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void cambioPasswordVerificaLaPasswordCorrente() throws Exception {
+        MockHttpSession sessione = autentica("cliente").sessione();
+
+        mockMvc.perform(put("/api/utenti/me/password")
+                        .session(sessione)
+                        .header("X-CSRF-TOKEN", tokenCsrf(sessione))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword":"errata","newPassword":"nuova-password-sicura"}
+                                """))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(put("/api/utenti/me/password")
+                        .session(sessione)
+                        .header("X-CSRF-TOKEN", tokenCsrf(sessione))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword":"password-di-test","newPassword":"nuova-password-sicura"}
+                                """))
+                .andExpect(status().isNoContent());
     }
 
     @Test
