@@ -1,6 +1,7 @@
 package it.gym.Prenotazioni.web;
 
 import it.gym.Prenotazioni.exception.PasswordCorrenteNonValidaException;
+import it.gym.Prenotazioni.exception.AccessoNonAutorizzatoException;
 import it.gym.Prenotazioni.exception.CorsoGiaEsistenteException;
 import it.gym.Prenotazioni.exception.CorsoNonTrovatoException;
 import it.gym.Prenotazioni.exception.MiaPalestraException;
@@ -32,6 +33,11 @@ public class ErroreController {
     @ExceptionHandler(UtenteGiaEsistenteException.class)
     public ResponseEntity<Map<String, String>> giaEsistente(UtenteGiaEsistenteException exception) {
         return errore(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
+    @ExceptionHandler(AccessoNonAutorizzatoException.class)
+    public ResponseEntity<Map<String, String>> accessoNonAutorizzato(AccessoNonAutorizzatoException exception) {
+        return errore(HttpStatus.FORBIDDEN, exception.getMessage());
     }
 
     @ExceptionHandler(CorsoGiaEsistenteException.class)
