@@ -1,6 +1,7 @@
 package it.gym.Prenotazioni.web;
 
 import it.gym.Prenotazioni.exception.PasswordCorrenteNonValidaException;
+import it.gym.Prenotazioni.exception.EmailGiaEsistenteException;
 import it.gym.Prenotazioni.exception.AccessoNonAutorizzatoException;
 import it.gym.Prenotazioni.exception.CorsoGiaEsistenteException;
 import it.gym.Prenotazioni.exception.CorsoNonTrovatoException;
@@ -25,13 +26,13 @@ public class ErroreController {
         return errore(HttpStatus.NOT_FOUND, exception.getMessage());
     }
 
-    @ExceptionHandler({CorsoNonTrovatoException.class, ProgrammaSettimanaleNonTrovatoException.class})
+    @ExceptionHandler({ CorsoNonTrovatoException.class, ProgrammaSettimanaleNonTrovatoException.class })
     public ResponseEntity<Map<String, String>> risorsaNonTrovata(MiaPalestraException exception) {
         return errore(HttpStatus.NOT_FOUND, exception.getMessage());
     }
 
-    @ExceptionHandler(UtenteGiaEsistenteException.class)
-    public ResponseEntity<Map<String, String>> giaEsistente(UtenteGiaEsistenteException exception) {
+    @ExceptionHandler({ UtenteGiaEsistenteException.class, EmailGiaEsistenteException.class })
+    public ResponseEntity<Map<String, String>> giaEsistente(MiaPalestraException exception) {
         return errore(HttpStatus.CONFLICT, exception.getMessage());
     }
 
@@ -71,6 +72,7 @@ public class ErroreController {
     }
 
     private ResponseEntity<Map<String, String>> errore(HttpStatus status, String message) {
-        return ResponseEntity.status(status).body(Map.of("errore", message == null ? status.getReasonPhrase() : message));
+        return ResponseEntity.status(status)
+                .body(Map.of("errore", message == null ? status.getReasonPhrase() : message));
     }
 }

@@ -19,6 +19,9 @@ import java.sql.SQLException;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Locale;
+import java.util.List;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Service
 public class PrenotazioniService {
@@ -74,6 +77,27 @@ public class PrenotazioniService {
             }
             throw eccezione;
         }
+    }
+
+    public record PrenotazioneDettaglio(Long id, Long clienteId, String nomeCliente, Long occorrenzaId,
+            String nomeCorso, LocalDate data, LocalTime ora, PrenotazioniStatus stato,
+            boolean cancellabile) {
+    }
+
+    @Transactional(readOnly = true)
+    public List<PrenotazioneDettaglio> elencoPerUtente(Long clienteId, String usernameAttore) {
+        Utenti attore = trovaAttore(usernameAttore);
+        Utenti cliente = clienteId == null ? attore
+                : trovaUtente(clienteId, "Il cliente della prenotazione non esiste.");
+        attore.verificaPermessoPrenotazione(cliente);
+        return prenotazioniRepository.findByCustomerIdOrderByCreatedAtDesc(cliente.getId()).stream()
+                .map(prenotazione -> new PrenotazioneDettaglio(prenotazione.getId(), cliente.getId(),
+                        cliente.getFirstName() + " " + cliente.getLastName(), prenotazione.getOccurrence().getId(),
+                        prenotazione.getOccurrence().getProgrammaSettimanale().getCorso().getName(),
+                        prenotazione.getOccurrence().getLessonDate(), prenotazione.getOccurrence().getStartTime(),
+                        prenotazione.getStatus(), prenotazione.getStatus() == PrenotazioniStatus.CONFIRMED
+                                && prenotazione.getOccurrence().operazioniConsentite(LocalDateTime.now(clock))))
+                .toList();
     }
 
     @Transactional

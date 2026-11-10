@@ -101,7 +101,7 @@ public class SecurityConfiguration {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/auth/csrf", "/api/auth/login",
+                        .requestMatchers("/api/pubblico/**", "/api/auth/csrf", "/api/auth/login", "/api/auth/register",
                                 "/swagger-ui.html", "/swagger-ui/**",
                                 "/v3/api-docs", "/v3/api-docs/**")
                         .permitAll()
@@ -142,16 +142,17 @@ public class SecurityConfiguration {
                 .info(new Info()
                         .title("miaPalestra API")
                         .version("1.0.0")
-                        .description("""
-                                Backend REST per la gestione di corsi, programmazione, lezioni e prenotazioni della palestra.
-                                
-                                **Autenticazione**: Usa POST /api/auth/login per autenticarti come ADMIN, SECRETARY o CUSTOMER.
-                                Ottieni il token CSRF con GET /api/auth/csrf e includilo nell'header X-CSRF-TOKEN.
-                                
-                                **Ruoli**:
-                                - ADMIN: Gestisce utenti, corsi, programmazioni
-                                - SECRETARY: Gestisce clienti e prenotazioni
-                                - CUSTOMER: Gestisce le proprie prenotazioni
-                                """));
+                        .description(
+                                """
+                                        Backend REST per la gestione di corsi, programmazione, lezioni e prenotazioni della palestra.
+
+                                        **Autenticazione**: Usa POST /api/auth/login per autenticarti come ADMIN, SECRETARY o CUSTOMER.
+                                        Ottieni il token CSRF con GET /api/auth/csrf e includilo nell'header X-CSRF-TOKEN.
+
+                                        **Ruoli**:
+                                        - ADMIN: Gestisce utenti, corsi, programmazioni
+                                        - SECRETARY: Gestisce clienti e prenotazioni
+                                        - CUSTOMER: Gestisce le proprie prenotazioni
+                                        """));
     }
 }

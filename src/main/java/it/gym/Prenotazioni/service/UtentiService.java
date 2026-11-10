@@ -3,6 +3,7 @@ package it.gym.Prenotazioni.service;
 import it.gym.Prenotazioni.entity.Utenti;
 import it.gym.Prenotazioni.enums.UserRole;
 import it.gym.Prenotazioni.exception.PasswordCorrenteNonValidaException;
+import it.gym.Prenotazioni.exception.EmailGiaEsistenteException;
 import it.gym.Prenotazioni.exception.UtenteGiaEsistenteException;
 import it.gym.Prenotazioni.exception.UtenteNonTrovatoException;
 import it.gym.Prenotazioni.repository.UtentiRepository;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.nio.charset.StandardCharsets;
 
 @Service
 public class UtentiService {
@@ -34,6 +36,40 @@ public class UtentiService {
         Utenti utente = new Utenti(username, passwordEncoder.encode(password), firstName, lastName,
                 email, phone, role);
         return utentiRepository.save(utente);
+    }
+
+    @Transactional
+    public Utenti registraCliente(String username, String password, String firstName, String lastName,
+            String email, String phone) {
+        String usernameValido = username == null ? null : username.trim();
+        validaTestoObbligatorio(usernameValido, "Username");
+        if (usernameValido.length() < 3 || usernameValido.length() > 80) {
+            throw new IllegalArgumentException("Lo username deve contenere da 3 a 80 caratteri.");
+        }
+        validaTestoObbligatorio(firstName, "Nome");
+        validaTestoObbligatorio(lastName, "Cognome");
+        if (firstName.trim().length() > 100 || lastName.trim().length() > 100) {
+            throw new IllegalArgumentException("Nome e cognome non possono superare 100 caratteri.");
+        }
+        validaPasswordRegistrazione(password);
+
+        String emailValida = email == null || email.isBlank() ? null : email.trim();
+        String telefonoValido = phone == null || phone.isBlank() ? null : phone.trim();
+        if (emailValida != null
+                && (emailValida.length() > 254 || !emailValida.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"))) {
+            throw new IllegalArgumentException("Inserire un indirizzo email valido.");
+        }
+        if (telefonoValido != null && telefonoValido.length() > 30) {
+            throw new IllegalArgumentException("Il numero di telefono non può superare 30 caratteri.");
+        }
+        if (utentiRepository.existsByUsername(usernameValido)) {
+            throw new UtenteGiaEsistenteException(usernameValido);
+        }
+        if (emailValida != null && utentiRepository.existsByEmail(emailValida)) {
+            throw new EmailGiaEsistenteException();
+        }
+        return creaUtente(usernameValido, password, firstName.trim(), lastName.trim(), emailValida,
+                telefonoValido, UserRole.CUSTOMER);
     }
 
     @Transactional(readOnly = true)
@@ -101,6 +137,17 @@ public class UtentiService {
     private void validaTestoObbligatorio(String value, String campo) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(campo + " obbligatorio.");
+        }
+    }
+
+    private void validaPasswordRegistrazione(String password) {
+        if (password == null || password.length() < 8
+                || password.getBytes(StandardCharsets.UTF_8).length > 72
+                || password.chars().noneMatch(Character::isUpperCase)
+                || password.chars().noneMatch(Character::isLowerCase)
+                || password.chars().noneMatch(Character::isDigit)) {
+            throw new IllegalArgumentException(
+                    "La password deve contenere almeno 8 caratteri, una maiuscola, una minuscola e un numero.");
         }
     }
 }

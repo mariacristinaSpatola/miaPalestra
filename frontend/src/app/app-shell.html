@@ -1,0 +1,27 @@
+<header class="topbar">
+    <a class="brand" routerLink="/" aria-label="formaFit, pagina iniziale">
+        <span class="brand-mark" aria-hidden="true">F</span>
+        <span>forma<span class="brand-accent">FIT</span></span>
+    </a>
+    <nav aria-label="Navigazione principale">
+        <a routerLink="/" fragment="corsi">Corsi</a>
+        <a routerLink="/" fragment="chi-siamo">La palestra</a>
+        <a routerLink="/" fragment="contatti">Contatti</a>
+        @if (auth.user()) {
+        <a class="nav-action" routerLink="/gestione">Area {{ auth.user()?.role === 'CUSTOMER' ? 'cliente' : 'staff'
+            }}</a>
+        <button class="nav-login" type="button" (click)="auth.logout()">Esci</button>
+        } @else {
+        <a class="nav-action" routerLink="/accedi">Accedi <span aria-hidden="true">↗</span></a>
+        }
+    </nav>
+</header>
+<main><router-outlet /></main>
+<footer class="site-footer">
+    <a class="brand brand-footer" routerLink="/" aria-label="formaFit, pagina iniziale">
+        <span class="brand-mark" aria-hidden="true">F</span><span>forma<span class="brand-accent">FIT</span></span>
+    </a>
+    <p>Allenati. Cresci. Appartieni.</p>
+    <a href="mailto:topforma@hotmail.it">topforma@hotmail.it</a>
+    <span>© formaFit · Via Sansone 1</span>
+</footer>

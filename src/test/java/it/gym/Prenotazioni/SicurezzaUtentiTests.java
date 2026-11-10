@@ -351,6 +351,72 @@ class SicurezzaUtentiTests {
                                 .andExpect(status().isUnauthorized());
         }
 
+        @Test
+        void registrazionePubblicaCreaSoloClienteEConsenteAccesso() throws Exception {
+                Sessione anonima = ottieniCsrf();
+                mockMvc.perform(post("/api/auth/register")
+                                .session(anonima.sessione())
+                                .header("X-CSRF-TOKEN", anonima.token())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"username":"nuovo-cliente","password":"Forza123",
+                                                 "firstName":"Nuovo","lastName":"Cliente",
+                                                 "role":"ADMIN"}
+                                                """))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.role").value("CUSTOMER"))
+                                .andExpect(jsonPath("$.password").doesNotExist());
+
+                org.junit.jupiter.api.Assertions.assertEquals(UserRole.CUSTOMER,
+                                utentiRepository.findByUsername("nuovo-cliente").orElseThrow().getRole());
+
+                mockMvc.perform(post("/api/auth/register")
+                                .session(anonima.sessione())
+                                .header("X-CSRF-TOKEN", anonima.token())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"username":"nuovo-cliente","password":"Forza123",
+                                                 "firstName":"Nuovo","lastName":"Cliente"}
+                                                """))
+                                .andExpect(status().isConflict());
+
+                Sessione csrfAggiornato = ottieniCsrf(anonima.sessione());
+                mockMvc.perform(post("/api/auth/login")
+                                .session(csrfAggiornato.sessione())
+                                .header("X-CSRF-TOKEN", csrfAggiornato.token())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"username":"nuovo-cliente","password":"Forza123"}
+                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.role").value("CUSTOMER"));
+        }
+
+        @Test
+        void registrazioneRifiutaPasswordDeboleEEmailGiaUsata() throws Exception {
+                Sessione anonima = ottieniCsrf();
+                mockMvc.perform(post("/api/auth/register")
+                                .session(anonima.sessione())
+                                .header("X-CSRF-TOKEN", anonima.token())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"username":"password-debole","password":"forza123",
+                                                 "firstName":"Nome","lastName":"Cliente"}
+                                                """))
+                                .andExpect(status().isBadRequest());
+
+                mockMvc.perform(post("/api/auth/register")
+                                .session(anonima.sessione())
+                                .header("X-CSRF-TOKEN", anonima.token())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"username":"email-duplicata","password":"Forza123",
+                                                 "firstName":"Nome","lastName":"Cliente",
+                                                 "email":"admin@example.test"}
+                                                """))
+                                .andExpect(status().isConflict());
+        }
+
         private void creaUtente(String username, UserRole role) {
                 utentiRepository.save(new Utenti(username, passwordEncoder.encode(PASSWORD), username, "Test",
                                 username + "@example.test", null, role));

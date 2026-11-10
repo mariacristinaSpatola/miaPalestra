@@ -8,8 +8,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import java.util.List;
+import java.time.LocalDate;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 public interface AgendaCorsiRepository extends JpaRepository<AgendaCorsi, Long> {
+
+    @EntityGraph(attributePaths = { "programmaSettimanale", "programmaSettimanale.corso" })
+    List<AgendaCorsi> findByLessonDateBetweenOrderByLessonDateAscStartTimeAsc(LocalDate dal, LocalDate al);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select agenda from AgendaCorsi agenda where agenda.id = :id")

@@ -35,6 +35,11 @@ public class CorsiService {
     }
 
     @Transactional(readOnly = true)
+    public List<Corsi> trovaAttivi() {
+        return corsiRepository.findAll().stream().filter(Corsi::isActive).toList();
+    }
+
+    @Transactional(readOnly = true)
     public Corsi trovaPerId(Long id) {
         return corsiRepository.findById(id).orElseThrow(CorsoNonTrovatoException::new);
     }

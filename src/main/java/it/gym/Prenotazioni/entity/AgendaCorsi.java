@@ -103,7 +103,8 @@ public class AgendaCorsi {
 
     public void verificaCancellabilita(LocalDateTime richiestaIl) {
         if (status != OccurrenceStatus.SCHEDULED) {
-            throw new RegolaDominioNonValidaException("Non è possibile cancellare la prenotazione di una lezione annullata.");
+            throw new RegolaDominioNonValidaException(
+                    "Non è possibile cancellare la prenotazione di una lezione annullata.");
         }
         verificaFinestraOperativa(richiestaIl);
     }
@@ -118,17 +119,36 @@ public class AgendaCorsi {
         status = OccurrenceStatus.CANCELLED;
     }
 
+    public boolean haConflittoConProgramma() {
+        return status == OccurrenceStatus.SCHEDULED && !programmaSettimanale.eValidoIl(lessonDate);
+    }
+
+    public boolean riconciliaProgramma(long prenotazioniConfermate) {
+        if (haConflittoConProgramma() && prenotazioniConfermate == 0) {
+            annulla();
+            return true;
+        }
+        return false;
+    }
+
+    public LocalDateTime scadenzaOperazioni() {
+        return startTime.isBefore(LocalTime.NOON)
+                ? lessonDate.atStartOfDay()
+                : lessonDate.atTime(startTime).minusHours(2);
+    }
+
+    public boolean operazioniConsentite(LocalDateTime richiestaIl) {
+        return status == OccurrenceStatus.SCHEDULED && richiestaIl != null
+                && (startTime.isBefore(LocalTime.NOON)
+                        ? richiestaIl.isBefore(scadenzaOperazioni())
+                        : !richiestaIl.isAfter(scadenzaOperazioni()));
+    }
+
     private void verificaFinestraOperativa(LocalDateTime richiestaIl) {
         if (richiestaIl == null) {
             throw new RegolaDominioNonValidaException("La data della richiesta è obbligatoria.");
         }
-        LocalDateTime scadenza = startTime.isBefore(LocalTime.NOON)
-                ? lessonDate.atStartOfDay()
-                : lessonDate.atTime(startTime).minusHours(2);
-        boolean richiestaConsentita = startTime.isBefore(LocalTime.NOON)
-                ? richiestaIl.isBefore(scadenza)
-                : !richiestaIl.isAfter(scadenza);
-        if (!richiestaConsentita) {
+        if (!operazioniConsentite(richiestaIl)) {
             throw new RegolaDominioNonValidaException(
                     "La finestra per prenotare o cancellare questa lezione è terminata.");
         }

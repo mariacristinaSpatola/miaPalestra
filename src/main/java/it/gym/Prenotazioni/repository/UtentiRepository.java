@@ -15,6 +15,8 @@ public interface UtentiRepository extends JpaRepository<Utenti, Long> {
 
     boolean existsByUsername(String username);
 
+    boolean existsByEmail(String email);
+
     List<Utenti> findAllByOrderByLastNameAscFirstNameAsc();
 
     @Query("""

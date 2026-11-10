@@ -2,6 +2,7 @@ package it.gym.Prenotazioni.web;
 
 import it.gym.Prenotazioni.service.UtentiService;
 import it.gym.Prenotazioni.web.dto.UtentiDto.LoginRequest;
+import it.gym.Prenotazioni.web.dto.UtentiDto.RegistrazioneCliente;
 import it.gym.Prenotazioni.web.dto.UtentiDto.TokenCsrf;
 import it.gym.Prenotazioni.web.dto.UtentiDto.UtenteRisposta;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -51,22 +53,31 @@ public class AuthController {
     }
 
     @GetMapping("/csrf")
-    @Operation(summary = "Recupera il token CSRF", 
-        description = "Restituisce il token CSRF necessario per proteggere le richieste POST, PUT, DELETE e PATCH. Il token deve essere incluso nell'header X-CSRF-TOKEN per tutte le richieste modificative.")
-    @ApiResponse(responseCode = "200", description = "Token CSRF recuperato con successo", 
-        content = @Content(schema = @Schema(implementation = TokenCsrf.class)))
+    @Operation(summary = "Recupera il token CSRF", description = "Restituisce il token CSRF necessario per proteggere le richieste POST, PUT, DELETE e PATCH. Il token deve essere incluso nell'header X-CSRF-TOKEN per tutte le richieste modificative.")
+    @ApiResponse(responseCode = "200", description = "Token CSRF recuperato con successo", content = @Content(schema = @Schema(implementation = TokenCsrf.class)))
     public TokenCsrf csrf(@RequestAttribute("_csrf") CsrfToken token) {
         return new TokenCsrf(token.getToken());
     }
 
-    @PostMapping("/login")
-    @Operation(summary = "Esegue il login", 
-        description = "Autentica un utente con username e password. Se le credenziali sono valide, crea una sessione autenticata e restituisce i dati dell'utente.")
+    @PostMapping("/register")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Registra un cliente", description = "Crea un account CUSTOMER. Il ruolo non è scelto dal client.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Login effettuato con successo", 
-            content = @Content(schema = @Schema(implementation = UtenteRisposta.class))),
-        @ApiResponse(responseCode = "400", description = "Username o password non forniti"),
-        @ApiResponse(responseCode = "401", description = "Credenziali non valide")
+            @ApiResponse(responseCode = "201", description = "Account creato"),
+            @ApiResponse(responseCode = "400", description = "Dati non validi"),
+            @ApiResponse(responseCode = "409", description = "Username o email già utilizzati")
+    })
+    public UtenteRisposta registra(@RequestBody RegistrazioneCliente richiesta) {
+        return UtenteRisposta.da(utentiService.registraCliente(richiesta.username(), richiesta.password(),
+                richiesta.firstName(), richiesta.lastName(), richiesta.email(), richiesta.phone()));
+    }
+
+    @PostMapping("/login")
+    @Operation(summary = "Esegue il login", description = "Autentica un utente con username e password. Se le credenziali sono valide, crea una sessione autenticata e restituisce i dati dell'utente.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Login effettuato con successo", content = @Content(schema = @Schema(implementation = UtenteRisposta.class))),
+            @ApiResponse(responseCode = "400", description = "Username o password non forniti"),
+            @ApiResponse(responseCode = "401", description = "Credenziali non valide")
     })
     public UtenteRisposta login(@RequestBody LoginRequest request, HttpServletRequest servletRequest,
             HttpServletResponse servletResponse) {
@@ -84,8 +95,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "Esegue il logout", 
-        description = "Termina la sessione autenticata dell'utente corrente e invalida il contesto di sicurezza.")
+    @Operation(summary = "Esegue il logout", description = "Termina la sessione autenticata dell'utente corrente e invalida il contesto di sicurezza.")
     @ApiResponse(responseCode = "204", description = "Logout eseguito con successo")
     public void logout(Authentication authentication, HttpServletRequest request, HttpServletResponse response) {
         logoutHandler.logout(request, response, authentication);

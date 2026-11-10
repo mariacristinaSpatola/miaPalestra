@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/prenotazioni")
@@ -23,6 +26,12 @@ public class PrenotazioniController {
 
     public PrenotazioniController(PrenotazioniService prenotazioniService) {
         this.prenotazioniService = prenotazioniService;
+    }
+
+    @GetMapping
+    public List<PrenotazioniService.PrenotazioneDettaglio> elenco(
+            @RequestParam(required = false) Long clienteId, Authentication autenticazione) {
+        return prenotazioniService.elencoPerUtente(clienteId, autenticazione.getName());
     }
 
     @PostMapping
