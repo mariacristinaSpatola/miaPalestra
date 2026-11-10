@@ -1,6 +1,7 @@
 package it.gym.Prenotazioni.entity;
 
 import it.gym.Prenotazioni.enums.UserRole;
+import it.gym.Prenotazioni.exception.AccessoNonAutorizzatoException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,6 +13,7 @@ import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Objects;
 
 @Entity
 @Table(name = "utenti")
@@ -135,6 +137,29 @@ public class Utenti {
 
     public void impostaAttivo(boolean active) {
         this.active = active;
+    }
+
+    public void verificaPermessoPrenotazione(Utenti cliente) {
+        if (cliente == null || cliente.getRole() != UserRole.CUSTOMER) {
+            throw new AccessoNonAutorizzatoException("Le prenotazioni sono consentite solo per i clienti.");
+        }
+        if (role == UserRole.CUSTOMER) {
+            if (!Objects.equals(id, cliente.getId())) {
+                throw new AccessoNonAutorizzatoException(
+                        "Un cliente può gestire solo le proprie prenotazioni.");
+            }
+            return;
+        }
+        if (role != UserRole.ADMIN && role != UserRole.SECRETARY) {
+            throw new AccessoNonAutorizzatoException("Non hai i permessi per gestire le prenotazioni.");
+        }
+    }
+
+    public void verificaPermessoCancellazione(Prenotazioni prenotazione) {
+        if (prenotazione == null) {
+            throw new AccessoNonAutorizzatoException("La prenotazione non è accessibile.");
+        }
+        verificaPermessoPrenotazione(prenotazione.getCustomer());
     }
 
     private static void validaTestoObbligatorio(String value, String campo) {

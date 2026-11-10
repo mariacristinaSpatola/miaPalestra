@@ -5,6 +5,8 @@ import it.gym.Prenotazioni.entity.Prenotazioni;
 import it.gym.Prenotazioni.entity.Utenti;
 import it.gym.Prenotazioni.enums.PrenotazioniChannel;
 import it.gym.Prenotazioni.enums.PrenotazioniStatus;
+import it.gym.Prenotazioni.enums.UserRole;
+import it.gym.Prenotazioni.exception.AccessoNonAutorizzatoException;
 import it.gym.Prenotazioni.exception.RegolaDominioNonValidaException;
 import it.gym.Prenotazioni.repository.AgendaCorsiRepository;
 import it.gym.Prenotazioni.repository.PrenotazioniRepository;
@@ -75,6 +77,18 @@ public class PrenotazioniService {
     }
 
     @Transactional
+    public Prenotazioni prenotaPerUtente(Long lezioneId, Long clienteId, String usernameAttore) {
+        Utenti attore = trovaAttore(usernameAttore);
+        Utenti cliente = clienteId == null ? attore
+                : trovaUtente(clienteId, "Il cliente della prenotazione non esiste.");
+        attore.verificaPermessoPrenotazione(cliente);
+        boolean prenotazioneDiretta = attore.getRole() == UserRole.CUSTOMER;
+        return prenota(lezioneId, cliente.getId(),
+                prenotazioneDiretta ? PrenotazioniChannel.WEB : PrenotazioniChannel.SECRETARY,
+                prenotazioneDiretta ? null : attore.getId());
+    }
+
+    @Transactional
     public Prenotazioni cancella(Long prenotazioneId) {
         if (prenotazioneId == null) {
             throw new RegolaDominioNonValidaException("La prenotazione da cancellare è obbligatoria.");
@@ -87,6 +101,17 @@ public class PrenotazioniService {
         lezione.verificaCancellabilita(richiestaIl);
         prenotazione.cancella(richiestaIl);
         return prenotazioniRepository.saveAndFlush(prenotazione);
+    }
+
+    @Transactional
+    public Prenotazioni cancellaPerUtente(Long prenotazioneId, String usernameAttore) {
+        if (prenotazioneId == null) {
+            throw new RegolaDominioNonValidaException("La prenotazione da cancellare è obbligatoria.");
+        }
+        Prenotazioni prenotazione = prenotazioniRepository.findById(prenotazioneId)
+                .orElseThrow(() -> new RegolaDominioNonValidaException("La prenotazione non esiste."));
+        trovaAttore(usernameAttore).verificaPermessoCancellazione(prenotazione);
+        return cancella(prenotazioneId);
     }
 
     private AgendaCorsi trovaLezioneConBlocco(Long lezioneId) {
@@ -103,6 +128,14 @@ public class PrenotazioniService {
         }
         return utentiRepository.findById(utenteId)
                 .orElseThrow(() -> new RegolaDominioNonValidaException(messaggio));
+    }
+
+    private Utenti trovaAttore(String username) {
+        if (username == null || username.isBlank()) {
+            throw new AccessoNonAutorizzatoException("L'utente autenticato non è valido.");
+        }
+        return utentiRepository.findByUsername(username)
+                .orElseThrow(() -> new AccessoNonAutorizzatoException("L'utente autenticato non è valido."));
     }
 
     private boolean eViolazioneUnivoca(Throwable eccezione) {
