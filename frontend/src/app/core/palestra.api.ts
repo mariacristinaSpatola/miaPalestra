@@ -54,6 +54,10 @@ export class PalestraApi {
         return this.http.post<Utente>('/api/utenti', payload, { withCredentials: true });
     }
 
+    aggiornaUtente(id: number, payload: { firstName: string; lastName: string; email: string | null; phone: string | null; password?: string; active?: boolean }) {
+        return this.http.put<Utente>(`/api/utenti/${id}`, payload, { withCredentials: true });
+    }
+
     pubblicaCalendario(dal: string) {
         return this.http.post<{ dal: string; al: string; create: number; annullate: number; conflitti: number[] }>(
             '/api/calendario/pubblica', { dal }, { withCredentials: true },

@@ -157,8 +157,16 @@ class SicurezzaUtentiTests {
         }
 
         @Test
-        void ricercaClientiRichiedeAlmenoDueCaratteri() throws Exception {
+        void ricercaClientiSenzaTestoRestituisceTuttiIClienti() throws Exception {
                 MockHttpSession sessione = autentica("segretaria").sessione();
+
+                mockMvc.perform(get("/api/utenti/clienti").param("query", "").session(sessione))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.length()").value(2));
+
+                mockMvc.perform(get("/api/utenti/clienti").param("query", "  ").session(sessione))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.length()").value(2));
 
                 mockMvc.perform(get("/api/utenti/clienti").param("query", "c").session(sessione))
                                 .andExpect(status().isBadRequest());

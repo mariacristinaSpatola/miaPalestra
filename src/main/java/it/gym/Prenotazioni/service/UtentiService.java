@@ -79,7 +79,10 @@ public class UtentiService {
 
     @Transactional(readOnly = true)
     public List<Utenti> cercaClienti(String query) {
-        if (query == null || query.isBlank() || query.trim().length() < 2) {
+        if (query == null || query.isBlank()) {
+            return utentiRepository.cercaPerRuoloENome(UserRole.CUSTOMER, "");
+        }
+        if (query.trim().length() < 2) {
             throw new IllegalArgumentException("La ricerca deve contenere almeno due caratteri.");
         }
         return utentiRepository.cercaPerRuoloENome(UserRole.CUSTOMER, query.trim());

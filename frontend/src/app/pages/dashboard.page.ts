@@ -8,9 +8,9 @@ import { Corso, Lezione, Prenotazione, Programma, Utente } from '../core/models'
 import { PalestraApi } from '../core/palestra.api';
 
 @Component({
-    selector: 'app-dashboard-page',
-    imports: [DatePipe, FormsModule],
-    template: `
+  selector: 'app-dashboard-page',
+  imports: [DatePipe, FormsModule],
+  template: `
     <section class="dashboard">
       <header class="dashboard-head">
         <div><p class="eyebrow">FORMAFIT / AREA RISERVATA</p><h1>Ciao, {{ user()?.firstName }}.</h1><p>{{ labelRuolo() }} · Via Sansone 1</p></div>
@@ -21,18 +21,19 @@ import { PalestraApi } from '../core/palestra.api';
 
       @if (user()?.role === 'ADMIN') {
         <div class="dashboard-grid">
-          <section class="manage-panel"><p class="eyebrow">01 / UTENTI</p><h2>Crea un account</h2>
+          <section class="manage-panel"><p class="eyebrow">01 / UTENTI</p><h2>{{ utenteInModifica() ? 'Modifica account' : 'Crea un account' }}</h2>
             <form (ngSubmit)="creaUtente()" class="form-grid">
-              <label>Username<input name="username" [(ngModel)]="nuovoUtente.username" minlength="3" required></label>
-              <label>Password iniziale<input name="password" [(ngModel)]="nuovoUtente.password" type="password" minlength="8" required></label>
+              <label>Username<input name="username" [(ngModel)]="nuovoUtente.username" minlength="3" [readonly]="!!utenteInModifica()" required></label>
+              <label>{{ utenteInModifica() ? 'Nuova password (opzionale)' : 'Password iniziale' }}<input name="password" [(ngModel)]="nuovoUtente.password" type="password" minlength="8" [required]="!utenteInModifica()"></label>
               <label>Nome<input name="firstName" [(ngModel)]="nuovoUtente.firstName" required></label>
               <label>Cognome<input name="lastName" [(ngModel)]="nuovoUtente.lastName" required></label>
               <label>Email<input name="email" [(ngModel)]="nuovoUtente.email" type="email"></label>
               <label>Telefono<input name="phone" [(ngModel)]="nuovoUtente.phone"></label>
-              <label class="wide">Ruolo<select name="role" [(ngModel)]="nuovoUtente.role"><option value="CUSTOMER">Cliente</option><option value="SECRETARY">Segretaria</option><option value="ADMIN">Amministratore</option></select></label>
-              <button class="button button-dark wide" type="submit">Crea account <span aria-hidden="true">↗</span></button>
+              <label class="wide">Ruolo<select name="role" [(ngModel)]="nuovoUtente.role" [disabled]="!!utenteInModifica()"><option value="CUSTOMER">Cliente</option><option value="SECRETARY">Segretaria</option><option value="ADMIN">Amministratore</option></select></label>
+              <button class="button button-dark wide" type="submit">{{ utenteInModifica() ? 'Salva modifiche' : 'Crea account' }} <span aria-hidden="true">↗</span></button>
+              @if (utenteInModifica()) { <button class="small-action wide" type="button" (click)="annullaModificaUtente()">Annulla modifica</button> }
             </form>
-            <div class="manage-list"><p class="eyebrow">ACCOUNT ESISTENTI</p>@for (account of utenti(); track account.id) { <div class="manage-row"><span><strong>{{ account.firstName }} {{ account.lastName }}</strong><small>{{ account.username }} · {{ account.role }}</small></span><button class="small-action" type="button" [disabled]="!account.active || account.id === user()?.id" (click)="disattivaUtente(account)">{{ account.active ? 'Disattiva' : 'Disattivato' }}</button></div> }</div>
+            <div class="manage-list"><p class="eyebrow">ACCOUNT ESISTENTI</p>@for (account of utenti(); track account.id) { <div class="manage-row"><span><strong>{{ account.firstName }} {{ account.lastName }}</strong><small>{{ account.username }} · {{ account.role }}</small></span><button class="small-action" type="button" [disabled]="account.id === user()?.id" (click)="account.active ? disattivaUtente(account) : riattivaUtente(account)">{{ account.active ? 'Disattiva' : 'Riattiva' }}</button></div> }</div>
           </section>
           <section class="manage-panel"><p class="eyebrow">02 / CATALOGO</p><h2>Aggiungi un corso</h2>
             <form (ngSubmit)="creaCorso()" class="form-grid">
@@ -62,7 +63,7 @@ import { PalestraApi } from '../core/palestra.api';
 
       @if (user()?.role === 'SECRETARY' || user()?.role === 'ADMIN') {
         <section class="manage-panel secretary-panel"><p class="eyebrow">GESTIONE CLIENTI</p><h2>Trova un cliente</h2>
-          <form class="inline-form" (ngSubmit)="cercaClienti()"><label>Nome, cognome o email<input name="query" [(ngModel)]="queryClienti" required minlength="2"></label><button class="button button-dark" type="submit">Cerca <span aria-hidden="true">⌕</span></button></form>
+          <form class="inline-form" (ngSubmit)="cercaClienti()"><label>Nome, cognome o email<input name="query" [(ngModel)]="queryClienti"></label><button class="button button-dark" type="submit">Cerca <span aria-hidden="true">⌕</span></button></form>
           @if (clienti().length) { <div class="client-list">@for (cliente of clienti(); track cliente.id) { <button type="button" class="client-option" [class.selected]="clienteSelezionato()?.id === cliente.id" (click)="selezionaCliente(cliente)"><strong>{{ cliente.firstName }} {{ cliente.lastName }}</strong><span>{{ cliente.email || cliente.username }}</span></button> }</div> }
           @if (clienteSelezionato()) { <p class="selected-client">Cliente selezionato: <strong>{{ clienteSelezionato()?.firstName }} {{ clienteSelezionato()?.lastName }}</strong></p> }
         </section>
@@ -83,101 +84,159 @@ import { PalestraApi } from '../core/palestra.api';
   `,
 })
 export class DashboardPage implements OnInit {
-    private readonly auth = inject(AuthApi);
-    private readonly api = inject(PalestraApi);
-    private readonly router = inject(Router);
-    readonly user = this.auth.user;
-    readonly corsi = signal<Corso[]>([]);
-    readonly programmi = signal<Programma[]>([]);
-    readonly utenti = signal<Utente[]>([]);
-    readonly lezioni = signal<Lezione[]>([]);
-    readonly prenotazioni = signal<Prenotazione[]>([]);
-    readonly clienti = signal<Utente[]>([]);
-    readonly clienteSelezionato = signal<Utente | null>(null);
-    readonly errore = signal('');
-    readonly messaggio = signal('');
-    queryClienti = '';
-    dal = this.today();
-    nuovoUtente = { username: '', password: '', firstName: '', lastName: '', email: '', phone: '', role: 'CUSTOMER' as Utente['role'] };
-    nuovoCorso = { nome: '', descrizione: '' };
-    nuovoProgramma = { corsoId: 0, giorno: 1, ora: '18:00', capienzaPredefinita: 12, validoDal: this.today() };
+  private readonly auth = inject(AuthApi);
+  private readonly api = inject(PalestraApi);
+  private readonly router = inject(Router);
+  readonly user = this.auth.user;
+  readonly corsi = signal<Corso[]>([]);
+  readonly programmi = signal<Programma[]>([]);
+  readonly utenti = signal<Utente[]>([]);
+  readonly lezioni = signal<Lezione[]>([]);
+  readonly prenotazioni = signal<Prenotazione[]>([]);
+  readonly clienti = signal<Utente[]>([]);
+  readonly clienteSelezionato = signal<Utente | null>(null);
+  readonly utenteInModifica = signal<Utente | null>(null);
+  readonly errore = signal('');
+  readonly messaggio = signal('');
+  queryClienti = '';
+  dal = this.today();
+  nuovoUtente = { username: '', password: '', firstName: '', lastName: '', email: '', phone: '', role: 'CUSTOMER' as Utente['role'] };
+  nuovoCorso = { nome: '', descrizione: '' };
+  nuovoProgramma = { corsoId: 0, giorno: 1, ora: '18:00', capienzaPredefinita: 12, validoDal: this.today() };
 
-    ngOnInit(): void {
-        this.auth.loadCurrent().subscribe({
-            next: user => {
-                if (user.role === 'ADMIN') {
-                    this.api.corsi().subscribe({ next: values => this.corsi.set(values), error: error => this.fail(error) });
-                    this.api.programmi().subscribe({ next: values => this.programmi.set(values), error: error => this.fail(error) });
-                    this.api.utenti().subscribe({ next: values => this.utenti.set(values), error: error => this.fail(error) });
-                }
-                if (user.role === 'CUSTOMER') this.caricaPrenotazioni();
-                this.caricaLezioni();
-            },
-            error: () => void this.router.navigateByUrl('/accedi'),
-        });
+  ngOnInit(): void {
+    this.auth.loadCurrent().subscribe({
+      next: user => {
+        if (user.role === 'ADMIN') {
+          this.api.corsi().subscribe({ next: values => this.corsi.set(values), error: error => this.fail(error) });
+          this.api.programmi().subscribe({ next: values => this.programmi.set(values), error: error => this.fail(error) });
+          this.api.utenti().subscribe({ next: values => this.utenti.set(values), error: error => this.fail(error) });
+        }
+        if (user.role === 'CUSTOMER') this.caricaPrenotazioni();
+        this.caricaLezioni();
+      },
+      error: () => void this.router.navigateByUrl('/accedi'),
+    });
+  }
+
+  labelRuolo(): string { return this.user()?.role === 'ADMIN' ? 'Amministratore' : this.user()?.role === 'SECRETARY' ? 'Segreteria' : 'Area cliente'; }
+  nomeGiorno(giorno: number): string { return ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'][giorno - 1] ?? ''; }
+
+  aggiorna(): void { this.errore.set(''); this.caricaLezioni(); this.caricaPrenotazioni(); }
+
+  cercaClienti(): void {
+    this.errore.set('');
+    this.api.clienti(this.queryClienti).subscribe({ next: values => this.clienti.set(values), error: error => this.fail(error) });
+  }
+
+  selezionaCliente(cliente: Utente): void {
+    this.clienteSelezionato.set(cliente);
+    if (this.user()?.role === 'ADMIN') {
+      this.utenteInModifica.set(cliente);
+      this.nuovoUtente = {
+        username: cliente.username,
+        password: '',
+        firstName: cliente.firstName,
+        lastName: cliente.lastName,
+        email: cliente.email ?? '',
+        phone: cliente.phone ?? '',
+        role: cliente.role,
+      };
     }
+    this.caricaPrenotazioni(cliente.id);
+  }
 
-    labelRuolo(): string { return this.user()?.role === 'ADMIN' ? 'Amministratore' : this.user()?.role === 'SECRETARY' ? 'Segreteria' : 'Area cliente'; }
-    nomeGiorno(giorno: number): string { return ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'][giorno - 1] ?? ''; }
+  annullaModificaUtente(): void {
+    this.utenteInModifica.set(null);
+    this.nuovoUtente = { username: '', password: '', firstName: '', lastName: '', email: '', phone: '', role: 'CUSTOMER' };
+  }
 
-    aggiorna(): void { this.errore.set(''); this.caricaLezioni(); this.caricaPrenotazioni(); }
-
-    cercaClienti(): void {
-        this.errore.set('');
-        this.api.clienti(this.queryClienti).subscribe({ next: values => this.clienti.set(values), error: error => this.fail(error) });
+  creaUtente(): void {
+    this.errore.set('');
+    const utenteInModifica = this.utenteInModifica();
+    if (utenteInModifica) {
+      const dati = {
+        firstName: this.nuovoUtente.firstName.trim(),
+        lastName: this.nuovoUtente.lastName.trim(),
+        email: this.nuovoUtente.email.trim() || null,
+        phone: this.nuovoUtente.phone.trim() || null,
+        ...(this.nuovoUtente.password.trim() ? { password: this.nuovoUtente.password } : {}),
+      };
+      this.api.aggiornaUtente(utenteInModifica.id, dati).subscribe({
+        next: aggiornato => {
+          this.utenteInModifica.set(aggiornato);
+          this.clienteSelezionato.set(aggiornato);
+          this.clienti.update(clienti => clienti.map(cliente => cliente.id === aggiornato.id ? aggiornato : cliente));
+          this.utenti.update(utenti => utenti.map(utente => utente.id === aggiornato.id ? aggiornato : utente));
+          this.nuovoUtente.password = '';
+          this.ok('Dati cliente aggiornati.');
+        },
+        error: error => this.fail(error),
+      });
+      return;
     }
+    const payload = { ...this.nuovoUtente, email: this.nuovoUtente.email.trim() || null, phone: this.nuovoUtente.phone.trim() || null };
+    this.api.creaUtente(payload).subscribe({ next: () => { this.nuovoUtente = { username: '', password: '', firstName: '', lastName: '', email: '', phone: '', role: 'CUSTOMER' }; this.api.utenti().subscribe(values => this.utenti.set(values)); this.ok('Account creato. Comunica le credenziali iniziali in modo sicuro.'); }, error: error => this.fail(error) });
+  }
 
-    selezionaCliente(cliente: Utente): void { this.clienteSelezionato.set(cliente); this.caricaPrenotazioni(cliente.id); }
+  creaCorso(): void {
+    this.errore.set('');
+    this.api.creaCorso(this.nuovoCorso.nome, this.nuovoCorso.descrizione).subscribe({ next: () => { this.nuovoCorso = { nome: '', descrizione: '' }; this.api.corsi().subscribe(values => this.corsi.set(values)); this.ok('Corso aggiunto al catalogo.'); }, error: error => this.fail(error) });
+  }
 
-    creaUtente(): void {
-        this.errore.set('');
-        const payload = { ...this.nuovoUtente, email: this.nuovoUtente.email.trim() || null, phone: this.nuovoUtente.phone.trim() || null };
-        this.api.creaUtente(payload).subscribe({ next: () => { this.nuovoUtente = { username: '', password: '', firstName: '', lastName: '', email: '', phone: '', role: 'CUSTOMER' }; this.api.utenti().subscribe(values => this.utenti.set(values)); this.ok('Account creato. Comunica le credenziali iniziali in modo sicuro.'); }, error: error => this.fail(error) });
-    }
+  creaProgramma(): void {
+    this.errore.set('');
+    this.api.creaProgramma({ ...this.nuovoProgramma, validoAl: null }).subscribe({ next: () => { this.api.programmi().subscribe(values => this.programmi.set(values)); this.ok('Programma settimanale creato.'); }, error: error => this.fail(error) });
+  }
 
-    creaCorso(): void {
-        this.errore.set('');
-        this.api.creaCorso(this.nuovoCorso.nome, this.nuovoCorso.descrizione).subscribe({ next: () => { this.nuovoCorso = { nome: '', descrizione: '' }; this.api.corsi().subscribe(values => this.corsi.set(values)); this.ok('Corso aggiunto al catalogo.'); }, error: error => this.fail(error) });
-    }
+  disattivaUtente(account: Utente): void { this.api.disattivaUtente(account.id).subscribe({ next: () => { this.api.utenti().subscribe(values => this.utenti.set(values)); this.ok(`Account ${account.username} disattivato.`); }, error: error => this.fail(error) }); }
+  riattivaUtente(account: Utente): void {
+    this.api.aggiornaUtente(account.id, {
+      firstName: account.firstName,
+      lastName: account.lastName,
+      email: account.email,
+      phone: account.phone,
+      active: true,
+    }).subscribe({
+      next: aggiornato => {
+        this.utenti.update(utenti => utenti.map(utente => utente.id === aggiornato.id ? aggiornato : utente));
+        this.ok(`Account ${aggiornato.username} riattivato.`);
+      },
+      error: error => this.fail(error),
+    });
+  }
+  disattivaCorso(corso: Corso): void { this.api.disattivaCorso(corso.id).subscribe({ next: () => { this.api.corsi().subscribe(values => this.corsi.set(values)); this.ok(`Corso ${corso.nome} disattivato.`); }, error: error => this.fail(error) }); }
+  disattivaProgramma(programma: Programma): void { this.api.disattivaProgramma(programma.id).subscribe({ next: () => { this.api.programmi().subscribe(values => this.programmi.set(values)); this.ok(`Programma ${programma.nomeCorso} disattivato.`); }, error: error => this.fail(error) }); }
 
-    creaProgramma(): void {
-        this.errore.set('');
-        this.api.creaProgramma({ ...this.nuovoProgramma, validoAl: null }).subscribe({ next: () => { this.api.programmi().subscribe(values => this.programmi.set(values)); this.ok('Programma settimanale creato.'); }, error: error => this.fail(error) });
-    }
+  pubblica(): void {
+    this.errore.set('');
+    this.api.pubblicaCalendario(this.dal).subscribe({ next: result => { this.ok(`Calendario ${result.dal} – ${result.al}: ${result.create} lezioni create, ${result.annullate} annullate, ${result.conflitti.length} da verificare.`); this.caricaLezioni(); }, error: error => this.fail(error) });
+  }
 
-    disattivaUtente(account: Utente): void { this.api.disattivaUtente(account.id).subscribe({ next: () => { this.api.utenti().subscribe(values => this.utenti.set(values)); this.ok(`Account ${account.username} disattivato.`); }, error: error => this.fail(error) }); }
-    disattivaCorso(corso: Corso): void { this.api.disattivaCorso(corso.id).subscribe({ next: () => { this.api.corsi().subscribe(values => this.corsi.set(values)); this.ok(`Corso ${corso.nome} disattivato.`); }, error: error => this.fail(error) }); }
-    disattivaProgramma(programma: Programma): void { this.api.disattivaProgramma(programma.id).subscribe({ next: () => { this.api.programmi().subscribe(values => this.programmi.set(values)); this.ok(`Programma ${programma.nomeCorso} disattivato.`); }, error: error => this.fail(error) }); }
+  prenota(lezione: Lezione): void {
+    this.errore.set('');
+    this.api.prenota(lezione.id, this.user()?.role !== 'CUSTOMER' ? this.clienteSelezionato()?.id : undefined).subscribe({ next: () => { this.ok('Posto prenotato.'); this.caricaLezioni(); this.caricaPrenotazioni(this.clienteSelezionato()?.id); }, error: error => this.fail(error) });
+  }
 
-    pubblica(): void {
-        this.errore.set('');
-        this.api.pubblicaCalendario(this.dal).subscribe({ next: result => { this.ok(`Calendario ${result.dal} – ${result.al}: ${result.create} lezioni create, ${result.annullate} annullate, ${result.conflitti.length} da verificare.`); this.caricaLezioni(); }, error: error => this.fail(error) });
-    }
+  cancella(booking: Prenotazione): void {
+    this.errore.set('');
+    this.api.cancella(booking.id).subscribe({ next: () => { this.ok('Prenotazione annullata.'); this.caricaPrenotazioni(this.clienteSelezionato()?.id); this.caricaLezioni(); }, error: error => this.fail(error) });
+  }
 
-    prenota(lezione: Lezione): void {
-        this.errore.set('');
-        this.api.prenota(lezione.id, this.user()?.role !== 'CUSTOMER' ? this.clienteSelezionato()?.id : undefined).subscribe({ next: () => { this.ok('Posto prenotato.'); this.caricaLezioni(); this.caricaPrenotazioni(this.clienteSelezionato()?.id); }, error: error => this.fail(error) });
-    }
+  caricaPrenotazioni(clienteId?: number): void {
+    if (this.user()?.role === 'ADMIN' && clienteId === undefined) return;
+    this.api.prenotazioni(clienteId).subscribe({ next: values => this.prenotazioni.set(values), error: error => this.fail(error) });
+  }
 
-    cancella(booking: Prenotazione): void {
-        this.errore.set('');
-        this.api.cancella(booking.id).subscribe({ next: () => { this.ok('Prenotazione annullata.'); this.caricaPrenotazioni(this.clienteSelezionato()?.id); this.caricaLezioni(); }, error: error => this.fail(error) });
-    }
+  private caricaLezioni(): void {
+    const dal = this.today();
+    const al = new Date();
+    al.setDate(al.getDate() + 30);
+    this.api.lezioni(dal, this.iso(al)).subscribe({ next: values => this.lezioni.set(values.filter(lesson => lesson.stato === 'SCHEDULED')), error: error => this.fail(error) });
+  }
 
-    caricaPrenotazioni(clienteId?: number): void {
-        if (this.user()?.role === 'ADMIN' && clienteId === undefined) return;
-        this.api.prenotazioni(clienteId).subscribe({ next: values => this.prenotazioni.set(values), error: error => this.fail(error) });
-    }
-
-    private caricaLezioni(): void {
-        const dal = this.today();
-        const al = new Date();
-        al.setDate(al.getDate() + 30);
-        this.api.lezioni(dal, this.iso(al)).subscribe({ next: values => this.lezioni.set(values.filter(lesson => lesson.stato === 'SCHEDULED')), error: error => this.fail(error) });
-    }
-
-    private today(): string { return this.iso(new Date()); }
-    private iso(date: Date): string { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
-    private ok(message: string): void { this.errore.set(''); this.messaggio.set(message); }
-    private fail(error: HttpErrorResponse): void { this.messaggio.set(''); this.errore.set(error.error?.errore || (error.status === 401 ? 'Sessione scaduta: accedi di nuovo.' : error.status === 403 ? 'Non hai i permessi per questa operazione.' : 'Operazione non riuscita. Riprova.')); }
+  private today(): string { return this.iso(new Date()); }
+  private iso(date: Date): string { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
+  private ok(message: string): void { this.errore.set(''); this.messaggio.set(message); }
+  private fail(error: HttpErrorResponse): void { this.messaggio.set(''); this.errore.set(error.error?.errore || (error.status === 401 ? 'Sessione scaduta: accedi di nuovo.' : error.status === 403 ? 'Non hai i permessi per questa operazione.' : 'Operazione non riuscita. Riprova.')); }
 }
