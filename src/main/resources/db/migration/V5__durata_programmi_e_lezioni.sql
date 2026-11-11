@@ -1,0 +1,2 @@
+ALTER TABLE programma_settimanale ADD COLUMN durata_minuti INTEGER NOT NULL DEFAULT 60;
+ALTER TABLE agenda_corsi ADD COLUMN durata_minuti INTEGER NOT NULL DEFAULT 60;

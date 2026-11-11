@@ -200,11 +200,29 @@ class SicurezzaUtentiTests {
                                                  "capienzaPredefinita":10,"validoDal":"2026-11-02"}
                                                 """))
                                 .andExpect(status().isCreated())
-                                .andExpect(jsonPath("$.giorno").value(1));
+                                .andExpect(jsonPath("$.giorno").value(1))
+                                .andExpect(jsonPath("$.durataMinuti").value(60));
 
                 mockMvc.perform(get("/api/programmi-settimanali").session(sessioneAdmin))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$[0].nomeCorso").exists());
+        }
+
+        @Test
+        void amministratoreConfiguraLaDurataDelProgramma() throws Exception {
+                MockHttpSession sessione = autentica("admin").sessione();
+
+                mockMvc.perform(post("/api/programmi-settimanali")
+                                .session(sessione)
+                                .header("X-CSRF-TOKEN", tokenCsrf(sessione))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"corsoId":1,"giorno":5,"ora":"20:15:00",
+                                                 "capienzaPredefinita":10,"validoDal":"2099-01-01",
+                                                 "durataMinuti":45}
+                                                """))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.durataMinuti").value(45));
         }
 
         @Test

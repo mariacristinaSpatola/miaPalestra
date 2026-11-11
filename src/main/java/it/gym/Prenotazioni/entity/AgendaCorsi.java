@@ -47,6 +47,9 @@ public class AgendaCorsi {
     @Column(nullable = false)
     private int capacity;
 
+    @Column(name = "durata_minuti", nullable = false)
+    private int durataMinuti;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private OccurrenceStatus status;
@@ -67,6 +70,7 @@ public class AgendaCorsi {
         this.lessonDate = lessonDate;
         this.startTime = startTime;
         this.capacity = capacity;
+        this.durataMinuti = programmaSettimanale.getDurataMinuti();
         this.status = OccurrenceStatus.SCHEDULED;
     }
 
@@ -88,6 +92,10 @@ public class AgendaCorsi {
 
     public int getCapacity() {
         return capacity;
+    }
+
+    public int getDurataMinuti() {
+        return durataMinuti;
     }
 
     public OccurrenceStatus getStatus() {

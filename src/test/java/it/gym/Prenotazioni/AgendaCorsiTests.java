@@ -29,6 +29,15 @@ class AgendaCorsiTests {
         }
 
         @Test
+        void laLezioneConservaLaDurataDelProgramma() {
+                ProgrammaSettimanale programma = new ProgrammaSettimanale(new Corsi("Yoga", null), 1,
+                                LocalTime.of(9, 0), 10, LUNEDI, null, 45);
+                AgendaCorsi lezione = new AgendaCorsi(programma, LUNEDI, LocalTime.of(9, 0), 10);
+
+                assertEquals(45, lezione.getDurataMinuti());
+        }
+
+        @Test
         void rifiutaOccorrenzeInDateNonValidePerProgrammiDisattivatiECorsiInattivi() {
                 Corsi corso = new Corsi("Yoga", null);
                 ProgrammaSettimanale programma = new ProgrammaSettimanale(corso, 1, LocalTime.of(9, 0), 10, LUNEDI,
@@ -53,6 +62,18 @@ class AgendaCorsiTests {
                 assertEquals(LocalDate.of(2027, 1, 13), periodo.ultimoGiorno());
                 assertEquals(30, periodo.date().size());
                 assertThrows(MiaPalestraException.class, () -> new PeriodoCalendario(null));
+        }
+
+        @Test
+        void ilPeriodoConfigurabileIncludeIlPrimoEGliUltimiGiorni() {
+                LocalDate inizio = LocalDate.of(2026, 12, 25);
+
+                assertEquals(inizio, new PeriodoCalendario(inizio, 1).ultimoGiorno());
+                assertEquals(LocalDate.of(2027, 1, 8), new PeriodoCalendario(inizio, 15).ultimoGiorno());
+                assertEquals(15, new PeriodoCalendario(inizio, 15).date().size());
+                assertEquals(LocalDate.of(2027, 1, 23), new PeriodoCalendario(inizio, 30).ultimoGiorno());
+                assertThrows(MiaPalestraException.class, () -> new PeriodoCalendario(inizio, 0));
+                assertThrows(MiaPalestraException.class, () -> new PeriodoCalendario(inizio, -1));
         }
 
         @Test

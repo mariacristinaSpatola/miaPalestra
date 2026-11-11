@@ -33,7 +33,8 @@ public class ProgrammiSettimanaliController {
     @ResponseStatus(HttpStatus.CREATED)
     public ProgrammaRisposta crea(@RequestBody NuovoProgramma richiesta) {
         return ProgrammaRisposta.da(programmiService.crea(richiesta.corsoId(), richiesta.giorno(), richiesta.ora(),
-                richiesta.capienzaPredefinita(), richiesta.validoDal(), richiesta.validoAl()));
+                richiesta.capienzaPredefinita(), richiesta.validoDal(), richiesta.validoAl(),
+                richiesta.durataMinuti()));
     }
 
     @GetMapping
@@ -49,7 +50,8 @@ public class ProgrammiSettimanaliController {
     @PutMapping("/{id}")
     public ProgrammaRisposta modifica(@PathVariable Long id, @RequestBody NuovoProgramma richiesta) {
         return ProgrammaRisposta.da(programmiService.modifica(id, richiesta.corsoId(), richiesta.giorno(),
-                richiesta.ora(), richiesta.capienzaPredefinita(), richiesta.validoDal(), richiesta.validoAl()));
+                richiesta.ora(), richiesta.capienzaPredefinita(), richiesta.validoDal(), richiesta.validoAl(),
+                richiesta.durataMinuti()));
     }
 
     @DeleteMapping("/{id}")

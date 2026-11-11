@@ -20,7 +20,7 @@ class ProgrammaSettimanaleTests {
     @Test
     void accettaGiorniIsoAiConfiniUnoESetteECapienzaPositivaMinima() {
         ProgrammaSettimanale lunedi = programma(1, LocalTime.MIDNIGHT, 1, DAL, DAL);
-        ProgrammaSettimanale domenica = programma(7, LocalTime.MAX, 1, DAL, null);
+        ProgrammaSettimanale domenica = programma(7, LocalTime.of(20, 0), 1, DAL, null);
 
         assertEquals(1, lunedi.getDayOfWeek());
         assertEquals(7, domenica.getDayOfWeek());
@@ -40,6 +40,25 @@ class ProgrammaSettimanaleTests {
         assertThrows(MiaPalestraException.class, () -> programma(1, null, 10, DAL, null));
         assertThrows(MiaPalestraException.class, () -> programma(1, LocalTime.NOON, 0, DAL, null));
         assertThrows(MiaPalestraException.class, () -> programma(1, LocalTime.NOON, -1, DAL, null));
+    }
+
+    @Test
+    void accettaDurataPositivaEFineAlleVentunoMaNonOltre() {
+        Corsi corso = new Corsi("Yoga", null);
+        ProgrammaSettimanale programma = new ProgrammaSettimanale(corso, 1, LocalTime.of(20, 30), 10,
+                DAL, null, 30);
+
+        assertEquals(30, programma.getDurataMinuti());
+        assertThrows(MiaPalestraException.class,
+                () -> new ProgrammaSettimanale(corso, 1, LocalTime.of(20, 30), 10, DAL, null, 31));
+        assertThrows(MiaPalestraException.class,
+                () -> new ProgrammaSettimanale(corso, 1, LocalTime.NOON, 10, DAL, null, 0));
+        assertThrows(MiaPalestraException.class,
+                () -> new ProgrammaSettimanale(corso, 1, LocalTime.NOON, 10, DAL, null, -1));
+        assertThrows(MiaPalestraException.class,
+                () -> new ProgrammaSettimanale(corso, 1, LocalTime.of(23, 30), 10, DAL, null, 1440));
+        assertThrows(MiaPalestraException.class,
+                () -> new ProgrammaSettimanale(corso, 1, LocalTime.of(20, 30, 0, 1), 10, DAL, null, 30));
     }
 
     @Test

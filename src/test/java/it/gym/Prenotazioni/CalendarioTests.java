@@ -65,6 +65,7 @@ class CalendarioTests {
         assertEquals(5, prima.create());
         assertEquals(0, seconda.create());
         assertEquals(5, calendario.elenco(inizio, inizio.plusDays(29)).size());
+        assertEquals(60, calendario.elenco(inizio, inizio).getFirst().durataMinuti());
         assertTrue(calendario.elenco(inizio.plusDays(30), inizio.plusDays(35)).isEmpty());
     }
 

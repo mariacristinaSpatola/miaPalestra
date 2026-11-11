@@ -29,9 +29,16 @@ public class ProgrammiSettimanaliService {
     @Transactional
     public ProgrammaSettimanale crea(Long corsoId, int giorno, LocalTime ora, int capienza,
             LocalDate validoDal, LocalDate validoAl) {
+        return crea(corsoId, giorno, ora, capienza, validoDal, validoAl, null);
+    }
+
+    @Transactional
+    public ProgrammaSettimanale crea(Long corsoId, int giorno, LocalTime ora, int capienza,
+            LocalDate validoDal, LocalDate validoAl, Integer durataMinuti) {
         Corsi corso = trovaCorsoForUpdate(corsoId);
         validaCorsoAttivo(corso);
-        ProgrammaSettimanale programma = new ProgrammaSettimanale(corso, giorno, ora, capienza, validoDal, validoAl);
+        ProgrammaSettimanale programma = new ProgrammaSettimanale(corso, giorno, ora, capienza, validoDal, validoAl,
+                durataMinuti == null ? 60 : durataMinuti);
         validaSovrapposizioni(programma, null);
         return programmaRepository.save(programma);
     }
@@ -54,6 +61,12 @@ public class ProgrammiSettimanaliService {
     @Transactional
     public ProgrammaSettimanale modifica(Long id, Long corsoId, int giorno, LocalTime ora, int capienza,
             LocalDate validoDal, LocalDate validoAl) {
+        return modifica(id, corsoId, giorno, ora, capienza, validoDal, validoAl, null);
+    }
+
+    @Transactional
+    public ProgrammaSettimanale modifica(Long id, Long corsoId, int giorno, LocalTime ora, int capienza,
+            LocalDate validoDal, LocalDate validoAl, Integer durataMinuti) {
         Corsi corso = trovaCorsoForUpdate(corsoId);
         ProgrammaSettimanale precedente = trovaPerId(id);
         if (!precedente.isActive() || precedente.getValidTo() != null) {
@@ -65,7 +78,8 @@ public class ProgrammiSettimanaliService {
                     "La nuova decorrenza deve essere successiva a quella del programma precedente.");
         }
         validaCorsoAttivo(corso);
-        ProgrammaSettimanale nuovo = new ProgrammaSettimanale(corso, giorno, ora, capienza, validoDal, validoAl);
+        ProgrammaSettimanale nuovo = new ProgrammaSettimanale(corso, giorno, ora, capienza, validoDal, validoAl,
+                durataMinuti == null ? precedente.getDurataMinuti() : durataMinuti);
         validaSovrapposizioni(nuovo, precedente.getId());
 
         precedente.chiudiValidita(validoDal.minusDays(1));

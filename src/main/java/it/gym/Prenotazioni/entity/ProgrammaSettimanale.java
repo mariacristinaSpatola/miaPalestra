@@ -39,6 +39,9 @@ public class ProgrammaSettimanale {
     @Column(name = "default_capacity", nullable = false)
     private int defaultCapacity;
 
+    @Column(name = "durata_minuti", nullable = false)
+    private int durataMinuti;
+
     @Column(name = "valid_from", nullable = false)
     private LocalDate validFrom;
 
@@ -53,11 +56,17 @@ public class ProgrammaSettimanale {
 
     public ProgrammaSettimanale(Corsi corso, int dayOfWeek, LocalTime startTime, int defaultCapacity,
             LocalDate validFrom, LocalDate validTo) {
-        valida(corso, dayOfWeek, startTime, defaultCapacity, validFrom, validTo);
+        this(corso, dayOfWeek, startTime, defaultCapacity, validFrom, validTo, 60);
+    }
+
+    public ProgrammaSettimanale(Corsi corso, int dayOfWeek, LocalTime startTime, int defaultCapacity,
+            LocalDate validFrom, LocalDate validTo, int durataMinuti) {
+        valida(corso, dayOfWeek, startTime, defaultCapacity, validFrom, validTo, durataMinuti);
         this.corso = corso;
         this.dayOfWeek = dayOfWeek;
         this.startTime = startTime;
         this.defaultCapacity = defaultCapacity;
+        this.durataMinuti = durataMinuti;
         this.validFrom = validFrom;
         this.validTo = validTo;
         this.active = true;
@@ -81,6 +90,10 @@ public class ProgrammaSettimanale {
 
     public int getDefaultCapacity() {
         return defaultCapacity;
+    }
+
+    public int getDurataMinuti() {
+        return durataMinuti;
     }
 
     public LocalDate getValidFrom() {
@@ -131,7 +144,7 @@ public class ProgrammaSettimanale {
     }
 
     private static void valida(Corsi corso, int dayOfWeek, LocalTime startTime, int defaultCapacity,
-            LocalDate validFrom, LocalDate validTo) {
+            LocalDate validFrom, LocalDate validTo, int durataMinuti) {
         if (corso == null) {
             throw new RegolaDominioNonValidaException("Il corso del programma è obbligatorio.");
         }
@@ -140,6 +153,11 @@ public class ProgrammaSettimanale {
         }
         if (startTime == null) {
             throw new RegolaDominioNonValidaException("L'ora del programma è obbligatoria.");
+        }
+        if (durataMinuti < 1 || durataMinuti > 21 * 60
+                || startTime.toNanoOfDay() + durataMinuti * 60_000_000_000L > LocalTime.of(21, 0).toNanoOfDay()) {
+            throw new RegolaDominioNonValidaException(
+                    "La durata deve essere positiva e la lezione deve terminare entro le 21:00.");
         }
         if (defaultCapacity < 1) {
             throw new RegolaDominioNonValidaException("La capienza predefinita deve essere almeno 1.");

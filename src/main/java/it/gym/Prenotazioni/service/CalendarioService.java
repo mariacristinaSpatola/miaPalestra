@@ -39,7 +39,7 @@ public class CalendarioService {
 
     public record LezioneRisposta(Long id, Long corsoId, String nomeCorso, LocalDate data, LocalTime ora,
             int capienza, long postiDisponibili, OccurrenceStatus stato, LocalDateTime scadenza,
-            boolean operazioniConsentite, boolean conflittoProgramma) {
+            boolean operazioniConsentite, boolean conflittoProgramma, int durataMinuti) {
     }
 
     public record PubblicazioneRisposta(LocalDate dal, LocalDate al, int create, int annullate,
@@ -59,7 +59,8 @@ public class CalendarioService {
                                 - prenotazioni.countByOccurrenceIdAndStatus(lezione.getId(),
                                         PrenotazioniStatus.CONFIRMED)),
                         lezione.getStatus(), lezione.scadenzaOperazioni(),
-                        lezione.operazioniConsentite(LocalDateTime.now(clock)), lezione.haConflittoConProgramma()))
+                        lezione.operazioniConsentite(LocalDateTime.now(clock)), lezione.haConflittoConProgramma(),
+                        lezione.getDurataMinuti()))
                 .toList();
     }
 

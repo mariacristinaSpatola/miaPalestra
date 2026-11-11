@@ -15,6 +15,7 @@ import it.gym.Prenotazioni.repository.PrenotazioniRepository;
 import it.gym.Prenotazioni.repository.ProgrammaSettimanaleRepository;
 import it.gym.Prenotazioni.repository.UtentiRepository;
 import org.junit.jupiter.api.Test;
+import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -26,6 +27,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.sql.DriverManager;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -68,6 +73,43 @@ class MiaPalestraApplicationTests {
     }
 
     @Test
+    void migrazioneDurataConservaLezioniEPrenotazioniEsistenti() throws Exception {
+        String url = "jdbc:h2:mem:migrazione-durata;DB_CLOSE_DELAY=-1";
+        Flyway.configure().dataSource(url, "sa", "").target("4").load().migrate();
+        try (var connessione = DriverManager.getConnection(url, "sa", "");
+                var comando = connessione.createStatement()) {
+            comando.executeUpdate(
+                    "INSERT INTO programma_settimanale (id, corsi_id, day_of_week, start_time, "
+                            + "default_capacity, valid_from, active) VALUES (10, 1, 1, '20:30', 10, '2026-01-01', TRUE)");
+            comando.executeUpdate("INSERT INTO agenda_corsi (id, programma_settimanale_id, lesson_date, "
+                    + "start_time, capacity, status) VALUES (20, 10, '2026-11-09', '20:30', 10, 'SCHEDULED')");
+            comando.executeUpdate(
+                    "INSERT INTO utenti (id, username, password_hash, first_name, last_name, role, "
+                            + "active, created_at) VALUES (30, 'cliente-migrazione', 'hash', 'Nome', 'Cliente', 'CUSTOMER', "
+                            + "TRUE, TIMESTAMP '2026-01-01 00:00:00')");
+            comando.executeUpdate(
+                    "INSERT INTO prenotazioni (id, customer_id, occurrence_id, status, channel, "
+                            + "created_at) VALUES (40, 30, 20, 'CONFIRMED', 'WEB', TIMESTAMP '2026-01-01 00:00:00')");
+        }
+
+        Flyway.configure().dataSource(url, "sa", "").load().migrate();
+
+        try (var connessione = DriverManager.getConnection(url, "sa", "");
+                var comando = connessione.createStatement();
+                var risultato = comando.executeQuery(
+                        "SELECT p.durata_minuti, a.durata_minuti, r.occurrence_id, "
+                                + "r.status FROM programma_settimanale p JOIN agenda_corsi a "
+                                + "ON a.programma_settimanale_id = p.id JOIN prenotazioni r ON r.occurrence_id = a.id "
+                                + "WHERE p.id = 10 AND a.id = 20 AND r.id = 40")) {
+            assertTrue(risultato.next());
+            assertEquals(60, risultato.getInt(1));
+            assertEquals(60, risultato.getInt(2));
+            assertEquals(20, risultato.getLong(3));
+            assertEquals("CONFIRMED", risultato.getString(4));
+        }
+    }
+
+    @Test
     void bootstrapsAdminWithDefaultCredentialsAndDoesNotResetExistingAccount() {
         Utenti admin = utentiRepository.findByUsername("admin").orElseThrow();
         String originalPasswordHash = admin.getPassword();
@@ -86,8 +128,9 @@ class MiaPalestraApplicationTests {
     @Transactional
     void countsOnlyConfirmedBookingsAndLocksOccurrenceForUpdate() {
         Corsi course = corsiRepository.findAll().get(0);
-        Utenti confirmedCustomer = utentiRepository.save(new Utenti("phase2-customer", "hash", "Test", "Customer",
-                null, null, UserRole.CUSTOMER));
+        Utenti confirmedCustomer = utentiRepository
+                .save(new Utenti("phase2-customer", "hash", "Test", "Customer",
+                        null, null, UserRole.CUSTOMER));
         Utenti cancelledCustomer = utentiRepository.save(new Utenti("phase2-customer-cancelled", "hash", "Test",
                 "Customer", null, null, UserRole.CUSTOMER));
         ProgrammaSettimanale schedule = programmaSettimanaleRepository.save(new ProgrammaSettimanale(course, 1,
@@ -95,10 +138,12 @@ class MiaPalestraApplicationTests {
         AgendaCorsi occurrence = agendaCorsiRepository.save(new AgendaCorsi(schedule, LocalDate.of(2026, 11, 9),
                 LocalTime.of(9, 0), 10));
 
-        prenotazioniRepository.save(new Prenotazioni(confirmedCustomer, occurrence, PrenotazioniStatus.CONFIRMED,
-                PrenotazioniChannel.WEB, null));
-        prenotazioniRepository.save(new Prenotazioni(cancelledCustomer, occurrence, PrenotazioniStatus.CANCELLED,
-                PrenotazioniChannel.SECRETARY, null));
+        prenotazioniRepository
+                .save(new Prenotazioni(confirmedCustomer, occurrence, PrenotazioniStatus.CONFIRMED,
+                        PrenotazioniChannel.WEB, null));
+        prenotazioniRepository
+                .save(new Prenotazioni(cancelledCustomer, occurrence, PrenotazioniStatus.CANCELLED,
+                        PrenotazioniChannel.SECRETARY, null));
 
         assertThat(prenotazioniRepository.countByOccurrenceIdAndStatus(occurrence.getId(),
                 PrenotazioniStatus.CONFIRMED)).isEqualTo(1);

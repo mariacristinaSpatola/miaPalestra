@@ -21,16 +21,16 @@ public final class CorsiProgrammiDto {
     }
 
     public record NuovoProgramma(Long corsoId, int giorno, LocalTime ora, int capienzaPredefinita,
-            LocalDate validoDal, LocalDate validoAl) {
+            LocalDate validoDal, LocalDate validoAl, Integer durataMinuti) {
     }
 
     public record ProgrammaRisposta(Long id, Long corsoId, String nomeCorso, int giorno, LocalTime ora,
-            int capienzaPredefinita, LocalDate validoDal, LocalDate validoAl, boolean attivo) {
+            int capienzaPredefinita, LocalDate validoDal, LocalDate validoAl, boolean attivo, int durataMinuti) {
         public static ProgrammaRisposta da(ProgrammaSettimanale programma) {
             return new ProgrammaRisposta(programma.getId(), programma.getCorso().getId(),
                     programma.getCorso().getName(), programma.getDayOfWeek(), programma.getStartTime(),
                     programma.getDefaultCapacity(), programma.getValidFrom(), programma.getValidTo(),
-                    programma.isActive());
+                    programma.isActive(), programma.getDurataMinuti());
         }
     }
 }

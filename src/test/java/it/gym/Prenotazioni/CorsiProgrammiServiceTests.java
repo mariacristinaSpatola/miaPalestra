@@ -17,6 +17,8 @@ import it.gym.Prenotazioni.repository.ProgrammaSettimanaleRepository;
 import it.gym.Prenotazioni.repository.UtentiRepository;
 import it.gym.Prenotazioni.service.CorsiService;
 import it.gym.Prenotazioni.service.ProgrammiSettimanaliService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -62,6 +64,9 @@ class CorsiProgrammiServiceTests {
     @Autowired
     private UtentiRepository utentiRepository;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", () -> "jdbc:h2:mem:corsi-programma;DB_CLOSE_DELAY=-1");
@@ -88,6 +93,33 @@ class CorsiProgrammiServiceTests {
 
         assertEquals(LUNEDI.plusDays(14), primo.getValidTo());
         assertEquals(LUNEDI.plusDays(15), successivo.getValidFrom());
+    }
+
+    @Test
+    void persisteLaDurataConfigurataNelProgrammaENellaLezione() {
+        Corsi corso = corsiService.creaCorso("Corso durata", null);
+        ProgrammaSettimanale programma = programmiService.crea(corso.getId(), 1, LocalTime.of(9, 0), 10,
+                LUNEDI, null, 45);
+        AgendaCorsi lezione = agendaRepository.save(new AgendaCorsi(programma, LUNEDI, LocalTime.of(9, 0), 10));
+        Long programmaId = programma.getId();
+        Long lezioneId = lezione.getId();
+        entityManager.flush();
+        entityManager.clear();
+
+        assertEquals(45, programmaRepository.findById(programmaId).orElseThrow().getDurataMinuti());
+        assertEquals(45, agendaRepository.findById(lezioneId).orElseThrow().getDurataMinuti());
+    }
+
+    @Test
+    void modificaSenzaDurataConservaLaDurataPrecedente() {
+        Corsi corso = corsiService.creaCorso("Corso durata modificata", null);
+        ProgrammaSettimanale precedente = programmiService.crea(corso.getId(), 1, LocalTime.of(9, 0), 10,
+                LUNEDI, null, 45);
+
+        ProgrammaSettimanale nuovo = programmiService.modifica(precedente.getId(), corso.getId(), 1,
+                LocalTime.of(10, 0), 10, LUNEDI.plusDays(7), null);
+
+        assertEquals(45, nuovo.getDurataMinuti());
     }
 
     @Test
@@ -121,8 +153,9 @@ class CorsiProgrammiServiceTests {
         ProgrammaSettimanale programma = programmiService.crea(corso.getId(), 1, LocalTime.of(9, 0), 10,
                 LUNEDI, null);
         AgendaCorsi lezione = agendaRepository.save(new AgendaCorsi(programma, LUNEDI, LocalTime.of(9, 0), 10));
-        Utenti cliente = utentiRepository.save(new Utenti("cliente-disattivato-corso", "hash", "Test", "Cliente",
-                null, null, UserRole.CUSTOMER));
+        Utenti cliente = utentiRepository
+                .save(new Utenti("cliente-disattivato-corso", "hash", "Test", "Cliente",
+                        null, null, UserRole.CUSTOMER));
         Prenotazioni prenotazione = prenotazioniRepository.save(new Prenotazioni(cliente, lezione,
                 PrenotazioniStatus.CONFIRMED, PrenotazioniChannel.WEB, null));
 
