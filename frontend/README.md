@@ -20,6 +20,8 @@ npm start
 
 Aprire `http://localhost:4200`. Il dev server inoltra `/api` a `http://localhost:8080`; in produzione configurare il reverse proxy per mantenere frontend e API sulla stessa origine, oppure consentire in CORS l'origine frontend esatta. L'autenticazione usa la sessione HttpOnly e l'interceptor richiede il token CSRF prima di ogni scrittura.
 
+Il proxy locale mantiene l'header `Host` originale (`changeOrigin: false`), cosi' Spring riconosce le richieste come same-origin e non rifiuta il login con `403 Invalid CORS request`. Dopo modifiche a `proxy.conf.json`, riavviare `npm start`.
+
 I clienti possono registrarsi dalla pagina di accesso; il backend assegna sempre il ruolo `CUSTOMER`. Per il primo accesso, creare l'amministratore seguendo la procedura di bootstrap nel README della root. L'amministratore crea gli account di segreteria.
 
 ## Verifica

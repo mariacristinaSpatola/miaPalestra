@@ -30,13 +30,7 @@ import java.time.LocalTime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@SpringBootTest(properties = {
-        "app.bootstrap-admin.enabled=true",
-        "app.bootstrap-admin.username=phase1-admin",
-        "app.bootstrap-admin.password=test-bootstrap-password",
-        "app.bootstrap-admin.first-name=Test",
-        "app.bootstrap-admin.last-name=Admin"
-})
+@SpringBootTest
 @ActiveProfiles("test")
 class MiaPalestraApplicationTests {
 
@@ -74,16 +68,17 @@ class MiaPalestraApplicationTests {
     }
 
     @Test
-    void bootstrapsAdminWithBcryptAndDoesNotResetExistingAccount() {
-        Utenti admin = utentiRepository.findByUsername("phase1-admin").orElseThrow();
+    void bootstrapsAdminWithDefaultCredentialsAndDoesNotResetExistingAccount() {
+        Utenti admin = utentiRepository.findByUsername("admin").orElseThrow();
         String originalPasswordHash = admin.getPassword();
 
-        assertThat(new BCryptPasswordEncoder().matches("test-bootstrap-password", originalPasswordHash)).isTrue();
+        assertThat(admin.getRole()).isEqualTo(UserRole.ADMIN);
+        assertThat(new BCryptPasswordEncoder().matches("12345678", originalPasswordHash)).isTrue();
 
         adminBootstrap.run();
 
         assertThat(utentiRepository.count()).isEqualTo(1);
-        assertThat(utentiRepository.findByUsername("phase1-admin").orElseThrow().getPassword())
+        assertThat(utentiRepository.findByUsername("admin").orElseThrow().getPassword())
                 .isEqualTo(originalPasswordHash);
     }
 

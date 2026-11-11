@@ -11,7 +11,7 @@ describe('App', () => {
       providers: [
         provideHttpClient(),
         provideRouter([]),
-        { provide: AuthApi, useValue: { user: () => null, restore: () => {} } },
+        { provide: AuthApi, useValue: { user: () => null, restore: () => { } } },
       ],
     })
       .compileComponents();
@@ -28,5 +28,8 @@ describe('App', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.brand')?.textContent).toContain('formaFIT');
+    const areaCliente = compiled.querySelector<HTMLAnchorElement>('.nav-action');
+    expect(areaCliente?.textContent).toContain('Area Cliente');
+    expect(areaCliente?.getAttribute('href')).toBe('/accedi');
   });
 });

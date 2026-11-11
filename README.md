@@ -21,9 +21,11 @@ Per compilare ed eseguire i test:
 ./mvnw.cmd verify
 ```
 
-## Bootstrap iniziale ADMIN
+## Account ADMIN iniziale
 
-Il bootstrap è disabilitato per impostazione predefinita. Per la prima esecuzione, impostare le credenziali nell'ambiente e abilitarlo esplicitamente:
+All'avvio con il profilo predefinito (`dev`) viene creato l'account `admin` con password `12345678`. La password è salvata con BCrypt e non viene scritta nei log. Queste credenziali sono solo per lo sviluppo locale: cambiarle prima di esporre l'applicazione a una rete non fidata.
+
+Il profilo `prod` disabilita il bootstrap per impostazione predefinita. Per creare un account iniziale in produzione, configurare credenziali forti nell'ambiente e abilitarlo esplicitamente:
 
 ```powershell
 $env:APP_BOOTSTRAP_ADMIN_ENABLED = "true"
@@ -34,7 +36,7 @@ $env:APP_BOOTSTRAP_ADMIN_LAST_NAME = "Palestra"
 ./mvnw.cmd spring-boot:run
 ```
 
-Dopo la creazione, fermare l'applicazione e disabilitare il bootstrap (`APP_BOOTSTRAP_ADMIN_ENABLED=false` o rimuovere la variabile). Se lo username esiste già, il bootstrap non crea né modifica account. La password viene salvata con BCrypt e non viene scritta nei log. Non salvare le credenziali in file versionati.
+Dopo la creazione, disabilitare il bootstrap (`APP_BOOTSTRAP_ADMIN_ENABLED=false`; nel profilo `prod` è sufficiente rimuovere l'override che lo abilita). Se lo username esiste già, il bootstrap non crea né modifica l'account. Non salvare credenziali di produzione in file versionati.
 
 ## Autenticazione, utenti e frontend
 

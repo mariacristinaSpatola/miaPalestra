@@ -1,0 +1,101 @@
+{
+  "planHash": "e8e86d12d5ae4ed058509e0fa8d927a34e8c1a7a19dba5c6353f3f345c255fdd",
+  "phase": "standalone",
+  "recordedAtUtc": "2026-11-11T14:52:38.3247185Z",
+  "retryCount": 0,
+  "resetBaseline": false,
+  "complete": true,
+  "result": {
+    "setupSucceeded": true,
+    "setupDurationMs": 0,
+    "setupFailureOutput": null,
+    "assertions": [
+      {
+        "name": "production-build",
+        "kind": "process",
+        "verificationMethod": "exit-code",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "\r\n\u003E frontend@0.0.0 build\r\n\u003E ng build\r\n\r\n\u003E Building...\r\n\u221A Building...\r\nInitial chunk files | Names         |  Raw size | Estimated transfer size\r\nmain-UKYZTURU.js    | main          | 348.71 kB |                90.74 kB\r\nstyles-HKQL6AKI.css | styles        |  23.00 kB |                 3.86 kB\r\n\r\n                    | Initial total | 371.71 kB |                94.60 kB\r\n\r\nApplication bundle generation complete. [7.638 seconds] - 2026-11-11T14:52:05.977Z\r\n\r\nOutput location: C:\\2024\\Java\\miaPalestra\\frontend\\dist\\frontend\r\n\r\n",
+        "durationMs": 17056
+      },
+      {
+        "name": "tests-pass",
+        "kind": "process",
+        "verificationMethod": "test-results",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 1,
+        "outputSample": "\r\n\u003E frontend@0.0.0 test\r\n\u003E ng test --watch=false\r\n\r\n\u003E Building...\r\n\u221A Building...\r\nApplication bundle generation complete. [4.946 seconds] - 2026-11-11T14:52:17.294Z\r\n\r\n\r\n\u001B[1m\u001B[30m\u001B[46m RUN \u001B[49m\u001B[39m\u001B[22m \u001B[36mv5.1.0 \u001B[39m\u001B[90mC:/2024/Java/miaPalestra/frontend\u001B[39m\r\n\r\n\r\n\u003C--- Last few GCs ---\u003E\r\n\r\n[26944:000001D1FA8E6000]     1517 ms: Scavenge 23.8 (29.0) -\u003E 20.3 (30.2) MB, pooled: 0.0 MB, 1.65 / 0.00 ms (average mu = 1.000, current mu = 1.000) allocation failure; \r\n[26944:000001D1FA8E6000]     2115 ms: Scavenge 25.1 (34.2) -\u003E 22.4 (37.5) MB, pooled: 0.0 MB, 9.54 / 0.00 ms (average mu = 1.000, current mu = 1.000) allocation failure; \r\n\r\nFATAL ERROR: Malloced operator new Allocation failed - process out of memory\r\n----- Native stack trace -----\r\n\r\n 1: 00007FF7DFCF9006 \r\n 2: 00007FF7DFCF958B \r\n 3: 00007FF7E0AE1CD1 \r\n 4: 00007FF7E087DD3E \r\n 5: 00007FF7E08763FA \r\n 6: 00007FF7E08D7A0F \r\n 7: 00007FF7E08D60BB \r\n 8: 00007FF7E2256DAD \r\n 9: 00007FF7E08C2B00 \r\n10: 00007FF7E08C3DEE \r\n11: 00007FF7E0B134A8 \r\n12: 00007FF7DFCC5043 \r\n13: 000001D1A7DD00E9 \r\n\r\n\u003C--- Last few GCs ---\u003E\r\n\r\n[19256:0000026B11705000]     2276 ms: Scavenge 25.2 (34.5) -\u003E 22.6 (37.5) MB, pooled: 0.0 MB, 33.47 / 0.00 ms (average mu = 1.000, current mu = 1.000) allocation failure; \r\n[19256:0000026B11705000]     2706 ms: Incremental Mark-Compact 32.0 (41.9) -\u003E 22.9 (41.7) MB, pooled: 0.0 MB, 4.32 / 0.00 ms (\u002B 0.0 ms in 4 steps since start of marking, biggest step 0.0 ms, walltime since start of marking 13 ms) (average mu = 0.998, curr\r\nFATAL ERROR: Zone Allocation failed - process out of memory\r\n----- Native stack trace -----\r\n\r\n 1: 00007FF7DFCF9006 \r\n 2: 00007FF7DFCF958B \r\n 3: 00007FF7E0AE1CD1 \r\n 4: 00007FF7E03F0293 \r\n 5: 00007FF7E0ACEF4F \r\n 6: 00007FF7E16D46C0 \r\n 7: 00007FF7E13AC6A2 \r\n 8: 00007FF7E13BE386 \r\n 9: 00007FF7E13C9B7C \r\n10: 00007FF7E140A2FA \r\n11: 00007FF7E01889F8 \r\n12: 00007FF7E0189067 \r\n13: 00007FF7E0187379 \r\n14: 00007FF7E01A66B5 \r\n15: 00007FF7E01F22EE \r\n16: 00007FF7E023DA63 \r\n17: 00007FF7E023B93B \r\n18: 00007FF7E023D3B4 \r\n19: 00007FF7E141CDBF \r\n20: 00007FF7DFC08F76 \r\n21: 00007FF7E0B402EF \r\n22: 00007FF7E2273893 \r\n23: 00007FFF4645DDA7 \r\n24: 00007FFF4685EE4C \r\n\u001B[31m\u23AF\u23AF\u23AF\u23AF\u23AF\u23AF\u001B[39m\u001B[1m\u001B[41m Unhandled Errors \u001B[49m\u001B[22m\u001B[31m\u23AF\u23AF\u23AF\u23AF\u23AF\u23AF\u001B[39m\r\n\u001B[31m\u001B[1m\r\nVitest caught 2 unhandled errors during the test run.\r\nThis might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.\u001B[22m\u001B[39m\r\n\r\n\u001B[31m\u23AF\u23AF\u23AF\u23AF\u23AF\u23AF\u001B[39m\u001B[1m\u001B[41m Unhandled Error \u001B[49m\u001B[22m\u001B[31m\u23AF\u23AF\u23AF\u23AF\u23AF\u23AF\u23AF\u001B[39m\r\n\u001B[31m\u001B[1mError\u001B[22m: [vitest-pool]: Worker forks emitted error.\u001B[39m\r\n\u001B[90m \u001B[2m\u276F\u001B[22m EventEmitter.onTaskError node_modules/vitest/dist/chunks/index.Di8au7q4.js:\u001B[2m5926:21\u001B[22m\u001B[39m\r\n\u001B[90m \u001B[2m\u276F\u001B[22m EventEmitter.emit node:events:\u001B[2m526:24\u001B[22m\u001B[39m\r\n\u001B[90m \u001B[2m\u276F\u001B[22m ChildProcess.emitUnexpectedExit node_modules/vitest/dist/chunks/index.Di8au7q4.js:\u001B[2m5401:22\u001B[22m\u001B[39m\r\n\u001B[90m \u001B[2m\u276F\u001B[22m ChildProcess.emit node:events:\u001B[2m514:20\u001B[22m\u001B[39m\r\n\u001B[90m \u001B[2m\u276F\u001B[22m ChildProcess._handle.onexit node:internal/child_process:\u001B[2m323:12\u001B[22m\u001B[39m\r\n\r\n\u001B[31m\u001B[1mCaused by: Error\u001B[22m: Worker exited unexpectedly with exit code 134 during starting state\u001B[39m\r\n\u001B[90m \u001B[2m\u276F\u001B[22m ChildProcess.emitUnexpectedExit node_modules/vitest/dist/chunks/index.Di8au7q4.js:\u001B[2m5399:33\u001B[22m\u001B[39m\r\n\u001B[90m \u001B[2m\u276F\u001B[22m ChildProcess.emit node:events:\u001B[2m514:20\u001B[22m\u001B[39m\r\n\u001B[90m \u001B[2m\u276F\u001B[22m ChildProcess._handle.onexit node:internal/child_process:\u001B[2m323:12\u001B[22m\u001B[39m\r\n\r\n\r\n\u001B[31m\u23AF\u23AF\u23AF\u23AF\u23AF\u23AF\u001B[39m\u001B[1m\u001B[41m Unhandled Error \u001B[49m\u001B[22m\u001B[31m\u23AF\u23AF\u23AF\u23AF\u23AF\u23AF\u23AF\u001B[39m\r\n\u001B[31m\u001B[1mError\u001B[22m: [vitest-pool]: Worker forks emitted error.\u001B[39m\r\n\u001B[90m \u001B[2m\u276F\u001B[22m EventEmitter.onTaskError node_modules/vitest/dist/chunks/index.Di8au7q4.js:\u001B[2m5926:21\u001B[22m\u001B[39m\r\n\u001B[90m \u001B[2m\u276F\u001B[22m EventEmitter.emit node:events:\u001B[2m526:24\u001B[22m\u001B[39m\r\n\u001B[90m \u001B[2m\u276F\u001B[22m ChildProcess.emitUnexpectedExit node_modules/vitest/dist/chunks/index.Di8au7q4.js:\u001B[2m5401:22\u001B[22m\u001B[39m\r\n\u001B[90m \u001B[2m\u276F\u001B[22m ChildProcess.emit node:events:\u001B[2m514:20\u001B[22m\u001B[39m\r\n\u001B[90m \u001B[2m\u276F\u001B[22m ChildProcess._handle.onexit node:internal/child_process:\u001B[2m323:12\u001B[22m\u001B[39m\r\n\r\n\u001B[31m\u001B[1mCaused by: Error\u001B[22m: Worker exited unexpectedly \n\u2026[truncated]",
+        "durationMs": 18588,
+        "testResults": {
+          "testFramework": "vitest",
+          "runnerDetectedFrom": "package_json",
+          "testsTotal": 6,
+          "testsPassed": 6,
+          "testsFailed": 0,
+          "testsSkipped": 0,
+          "parseFailed": false
+        }
+      },
+      {
+        "name": "login-page-served",
+        "kind": "http-probe",
+        "verificationMethod": "http-status",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": null,
+        "outputSample": "HTTP 200\n\u003C!doctype html\u003E\r\n\u003Chtml lang=\u0022it\u0022\u003E\r\n\r\n\u003Chead\u003E\n  \u003Cscript type=\u0022module\u0022 src=\u0022/@vite/client\u0022\u003E\u003C/script\u003E\n\r\n  \u003Cmeta charset=\u0022utf-8\u0022\u003E\r\n  \u003Ctitle\u003EformaFit | Allenati insieme\u003C/title\u003E\r\n  \u003Cbase href=\u0022/\u0022\u003E\r\n  \u003Cmeta name=\u0022viewport\u0022 content=\u0022width=device-width, initial-scale=1\u0022\u003E\r\n  \u003Cmeta name=\u0022description\u0022 content=\u0022Corsi, allenamenti e community: trova il tuo prossimo allenamento da formaFit, in via Sansone 1.\u0022\u003E\r\n  \u003Cmeta name=\u0022theme-color\u0022 content=\u0022#171a18\u0022\u003E\r\n\u003Clink rel=\u0022stylesheet\u0022 href=\u0022styles.css\u0022\u003E\u003C/head\u003E\r\n\r\n\u003Cbody\u003E\r\n  \u003Capp-root\u003E\u003C/app-root\u003E\r\n\u003Cscript src=\u0022main.js\u0022 type=\u0022module\u0022\u003E\u003C/script\u003E\u003C/body\u003E\r\n\r\n\u003C/html\u003E\n--- server output ---\n\r\n\u003E frontend@0.0.0 start\r\n\u003E ng serve --port 4201\r\n\r\n\u003E Building...\r\n\u221A Building...\r\nInitial chunk files | Names         |  Raw size\r\nmain.js             | main          | 115.31 kB | \r\nstyles.css          | styles        |  18.27 kB | \r\n\r\n                    | Initial total | 133.58 kB\r\n\r\nApplication bundle generation complete. [6.555 seconds] - 2026-11-11T14:52:35.801Z\r\n\r\nWatch mode enabled. Watching for file changes...\r\nNOTE: Raw file sizes do not reflect development server per-request transformations.\r\n  \u001B[32m\u279C\u001B[39m  \u001B[1mLocal\u001B[22m:   \u001B[36mhttp://localhost:\u001B[1m4201\u001B[22m/\u001B[39m\r\n",
+        "durationMs": 13230
+      }
+    ],
+    "executions": [
+      {
+        "source": "production-build",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "run",
+          "build"
+        ],
+        "cwd": "C:\\2024\\Java\\miaPalestra\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "tests-pass",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "test",
+          "--",
+          "--watch=false"
+        ],
+        "cwd": "C:\\2024\\Java\\miaPalestra\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "login-page-served",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "start",
+          "--",
+          "--port",
+          "4201"
+        ],
+        "cwd": "C:\\2024\\Java\\miaPalestra\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      }
+    ]
+  }
+}

@@ -74,7 +74,16 @@ export class LoginPage {
         this.caricamento.set(true);
         this.auth.login(this.username, this.password).subscribe({
             next: () => { this.caricamento.set(false); void this.router.navigateByUrl('/gestione'); },
-            error: () => { this.caricamento.set(false); this.errore.set('Username o password non validi.'); },
+            error: (error: HttpErrorResponse) => {
+                this.caricamento.set(false);
+                if (error.status === 401) {
+                    this.errore.set('Username o password non validi.');
+                } else if (error.status === 403) {
+                    this.errore.set('Accesso bloccato dai controlli di sicurezza. Ricarica la pagina e riprova.');
+                } else {
+                    this.errore.set('Servizio di accesso non disponibile. Riprova tra poco.');
+                }
+            },
         });
     }
 
