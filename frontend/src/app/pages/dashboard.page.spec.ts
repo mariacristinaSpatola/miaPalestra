@@ -1,13 +1,118 @@
+import { registerLocaleData } from '@angular/common';
+import localeIt from '@angular/common/locales/it';
+import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { AuthApi } from '../core/auth.api';
-import { Utente } from '../core/models';
+import { Lezione, Utente } from '../core/models';
 import { PalestraApi } from '../core/palestra.api';
 import { DashboardPage } from './dashboard.page';
 
 describe('DashboardPage', () => {
+    const lezione: Lezione = {
+        id: 12, corsoId: 3, nomeCorso: 'Pilates', data: '2026-12-10', ora: '18:30:00',
+        durataMinuti: 60, capienza: 12, postiDisponibili: 8, stato: 'SCHEDULED',
+        scadenza: '2026-12-10T17:30:00', operazioniConsentite: false, conflittoProgramma: false,
+    };
+    const segretaria: Utente = {
+        id: 1, username: 'segreteria', firstName: 'Ada', lastName: 'Rossi',
+        email: null, phone: null, role: 'SECRETARY', active: true,
+    };
+
+    beforeEach(() => registerLocaleData(localeIt));
+
+    it('permette alla segreteria di modificare una lezione e aggiorna la lista', async () => {
+        const aggiornata = { ...lezione, ora: '19:00:00', durataMinuti: 45, capienza: 10 };
+        const lezioni = vi.fn().mockReturnValueOnce(of([lezione])).mockReturnValue(of([aggiornata]));
+        const modificaLezione = vi.fn(() => of(aggiornata));
+        TestBed.configureTestingModule({
+            imports: [DashboardPage],
+            providers: [provideRouter([]),
+            { provide: AuthApi, useValue: { user: signal(segretaria), loadCurrent: () => of(segretaria) } },
+            { provide: PalestraApi, useValue: { lezioni, modificaLezione } },
+            ],
+        });
+        const fixture = TestBed.createComponent(DashboardPage);
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        const modifica = Array.from(fixture.nativeElement.querySelectorAll('.lesson-actions button') as NodeListOf<HTMLButtonElement>)
+            .find(button => button.textContent?.includes('Modifica'))!;
+        modifica.click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(fixture.componentInstance.modificaLezione).toEqual({ ora: '18:30', durataMinuti: 60, capienza: 12 });
+
+        fixture.componentInstance.modificaLezione = { ora: '19:00', durataMinuti: 45, capienza: 10 };
+        fixture.componentInstance.salvaLezione();
+        expect(modificaLezione).toHaveBeenCalledWith(12, { ora: '19:00', durataMinuti: 45, capienza: 10 });
+        expect(fixture.componentInstance.lezioni()[0]).toEqual(aggiornata);
+        expect(fixture.componentInstance.lezioneInModifica()).toBeNull();
+        expect(lezioni).toHaveBeenCalledTimes(2);
+    });
+
+    it('mantiene aperta la modifica quando il backend rifiuta i dati', async () => {
+        const modificaLezione = vi.fn(() => throwError(() => new HttpErrorResponse({ status: 400, error: { errore: 'Capienza insufficiente.' } })));
+        TestBed.configureTestingModule({
+            imports: [DashboardPage],
+            providers: [provideRouter([]),
+            { provide: AuthApi, useValue: { user: signal(segretaria), loadCurrent: () => of(segretaria) } },
+            { provide: PalestraApi, useValue: { lezioni: () => of([lezione]), modificaLezione } },
+            ],
+        });
+        const fixture = TestBed.createComponent(DashboardPage);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.componentInstance.iniziaModificaLezione(lezione);
+        fixture.componentInstance.salvaLezione();
+        expect(fixture.componentInstance.errore()).toBe('Capienza insufficiente.');
+        expect(fixture.componentInstance.lezioneInModifica()).toEqual(lezione);
+        expect(fixture.componentInstance.operazioneLezioneInCorso()).toBe(false);
+    });
+
+    it('annulla la lezione solo dopo conferma e aggiorna le prenotazioni del cliente selezionato', async () => {
+        const lezioni = vi.fn().mockReturnValueOnce(of([lezione])).mockReturnValue(of([]));
+        const annullaLezione = vi.fn(() => of(undefined));
+        const prenotazioni = vi.fn(() => of([]));
+        const conferma = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+        TestBed.configureTestingModule({
+            imports: [DashboardPage],
+            providers: [provideRouter([]),
+            { provide: AuthApi, useValue: { user: signal(segretaria), loadCurrent: () => of(segretaria) } },
+            { provide: PalestraApi, useValue: { lezioni, annullaLezione, prenotazioni } },
+            ],
+        });
+        const fixture = TestBed.createComponent(DashboardPage);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.componentInstance.clienteSelezionato.set({ ...segretaria, id: 8, role: 'CUSTOMER' });
+        fixture.componentInstance.annullaLezione(lezione);
+        expect(annullaLezione).not.toHaveBeenCalled();
+        fixture.componentInstance.annullaLezione(lezione);
+        expect(conferma).toHaveBeenCalledWith(expect.stringContaining('prenotazioni confermate'));
+        expect(annullaLezione).toHaveBeenCalledWith(12);
+        expect(fixture.componentInstance.lezioni()).toEqual([]);
+        expect(prenotazioni).toHaveBeenCalledWith(8);
+        conferma.mockRestore();
+    });
+
+    it('non mostra le azioni di gestione al cliente', async () => {
+        const cliente: Utente = { ...segretaria, role: 'CUSTOMER' };
+        TestBed.configureTestingModule({
+            imports: [DashboardPage],
+            providers: [provideRouter([]),
+            { provide: AuthApi, useValue: { user: signal(cliente), loadCurrent: () => of(cliente) } },
+            { provide: PalestraApi, useValue: { lezioni: () => of([lezione]), prenotazioni: () => of([]) } },
+            ],
+        });
+        const fixture = TestBed.createComponent(DashboardPage);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(fixture.nativeElement.querySelectorAll('.lesson-actions button')).toHaveLength(1);
+    });
+
     it('precompila i dati del cliente selezionato e salva le modifiche sul suo account', async () => {
         const cliente: Utente = {
             id: 8,

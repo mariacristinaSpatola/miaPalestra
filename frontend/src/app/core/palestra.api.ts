@@ -13,6 +13,14 @@ export class PalestraApi {
         return this.http.get<Lezione[]>('/api/pubblico/lezioni', { params });
     }
 
+    modificaLezione(id: number, payload: { ora: string; durataMinuti: number; capienza: number }) {
+        return this.http.put<Lezione>(`/api/calendario/lezioni/${id}`, payload, { withCredentials: true });
+    }
+
+    annullaLezione(id: number) {
+        return this.http.post<void>(`/api/calendario/lezioni/${id}/annulla`, null, { withCredentials: true });
+    }
+
     prenotazioni(clienteId?: number) {
         let params = new HttpParams();
         if (clienteId !== undefined) params = params.set('clienteId', clienteId);

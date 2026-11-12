@@ -22,6 +22,7 @@ export interface Lezione {
     nomeCorso: string;
     data: string;
     ora: string;
+    durataMinuti: number;
     capienza: number;
     postiDisponibili: number;
     stato: 'SCHEDULED' | 'CANCELLED';

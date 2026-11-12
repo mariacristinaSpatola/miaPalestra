@@ -71,7 +71,19 @@ import { PalestraApi } from '../core/palestra.api';
 
       @if (user()?.role === 'CUSTOMER' || user()?.role === 'SECRETARY' || user()?.role === 'ADMIN') {
         <section class="booking-section"><div class="section-heading"><div><p class="eyebrow">PRENOTA UN POSTO</p><h2>Lezioni <span>disponibili</span></h2></div><span class="schedule-note">{{ user()?.role === 'CUSTOMER' ? 'I posti si aggiornano dopo la conferma.' : 'Seleziona un cliente per prenotare.' }}</span></div>
-          <div class="lesson-list">@for (lezione of lezioni(); track lezione.id) { <div class="lesson-row"><span>{{ lezione.data | date:'EEE d MMM':'':'it' }}</span><strong>{{ lezione.ora.slice(0, 5) }}</strong><b>{{ lezione.nomeCorso }}</b><span>{{ lezione.postiDisponibili }} posti</span><button class="small-action" type="button" [disabled]="!lezione.operazioniConsentite || !lezione.postiDisponibili || (user()?.role !== 'CUSTOMER' && !clienteSelezionato())" (click)="prenota(lezione)">Prenota</button></div> } @empty { <p class="empty-state">Nessuna lezione disponibile nel periodo pubblicato.</p> }</div>
+          <div class="lesson-list">@for (lezione of lezioni(); track lezione.id) {
+            <div class="lesson-row"><span>{{ lezione.data | date:'EEE d MMM':'':'it' }}</span><strong>{{ lezione.ora.slice(0, 5) }}</strong><b>{{ lezione.nomeCorso }}</b><span>{{ lezione.postiDisponibili }} posti</span><div class="lesson-actions"><button class="small-action" type="button" [disabled]="!lezione.operazioniConsentite || !lezione.postiDisponibili || (user()?.role !== 'CUSTOMER' && !clienteSelezionato())" (click)="prenota(lezione)">Prenota</button>
+              @if (user()?.role === 'ADMIN' || user()?.role === 'SECRETARY') { <button class="small-action" type="button" [disabled]="operazioneLezioneInCorso()" (click)="iniziaModificaLezione(lezione)">Modifica</button><button class="small-action cancel-action" type="button" [disabled]="operazioneLezioneInCorso()" (click)="annullaLezione(lezione)">Annulla lezione</button> }
+            </div></div>
+            @if (lezioneInModifica()?.id === lezione.id) {
+              <form class="lesson-edit form-grid" #modificaForm="ngForm" (ngSubmit)="salvaLezione()">
+                <label>Ora<input name="oraLezione" type="time" [(ngModel)]="modificaLezione.ora" required></label>
+                <label>Durata (minuti)<input name="durataLezione" type="number" min="1" max="1260" step="1" [(ngModel)]="modificaLezione.durataMinuti" required></label>
+                <label>Capienza<input name="capienzaLezione" type="number" min="1" step="1" [(ngModel)]="modificaLezione.capienza" required></label>
+                <div class="lesson-edit-actions"><button class="button button-dark" type="submit" [disabled]="modificaForm.invalid || operazioneLezioneInCorso()">Salva modifiche</button><button class="small-action" type="button" [disabled]="operazioneLezioneInCorso()" (click)="chiudiModificaLezione()">Annulla modifica</button></div>
+              </form>
+            }
+          } @empty { <p class="empty-state">Nessuna lezione disponibile nel periodo pubblicato.</p> }</div>
         </section>
       }
 
@@ -96,6 +108,8 @@ export class DashboardPage implements OnInit {
   readonly clienti = signal<Utente[]>([]);
   readonly clienteSelezionato = signal<Utente | null>(null);
   readonly utenteInModifica = signal<Utente | null>(null);
+  readonly lezioneInModifica = signal<Lezione | null>(null);
+  readonly operazioneLezioneInCorso = signal(false);
   readonly errore = signal('');
   readonly messaggio = signal('');
   queryClienti = '';
@@ -103,6 +117,7 @@ export class DashboardPage implements OnInit {
   nuovoUtente = { username: '', password: '', firstName: '', lastName: '', email: '', phone: '', role: 'CUSTOMER' as Utente['role'] };
   nuovoCorso = { nome: '', descrizione: '' };
   nuovoProgramma = { corsoId: 0, giorno: 1, ora: '18:00', capienzaPredefinita: 12, validoDal: this.today() };
+  modificaLezione = { ora: '', durataMinuti: 0, capienza: 0 };
 
   ngOnInit(): void {
     this.auth.loadCurrent().subscribe({
@@ -211,6 +226,46 @@ export class DashboardPage implements OnInit {
   pubblica(): void {
     this.errore.set('');
     this.api.pubblicaCalendario(this.dal).subscribe({ next: result => { this.ok(`Calendario ${result.dal} – ${result.al}: ${result.create} lezioni create, ${result.annullate} annullate, ${result.conflitti.length} da verificare.`); this.caricaLezioni(); }, error: error => this.fail(error) });
+  }
+
+  iniziaModificaLezione(lezione: Lezione): void {
+    this.lezioneInModifica.set(lezione);
+    this.modificaLezione = { ora: lezione.ora.slice(0, 5), durataMinuti: lezione.durataMinuti, capienza: lezione.capienza };
+  }
+
+  chiudiModificaLezione(): void { this.lezioneInModifica.set(null); }
+
+  salvaLezione(): void {
+    const lezione = this.lezioneInModifica();
+    if (!lezione || this.operazioneLezioneInCorso()) return;
+    this.errore.set('');
+    this.operazioneLezioneInCorso.set(true);
+    this.api.modificaLezione(lezione.id, this.modificaLezione).subscribe({
+      next: () => {
+        this.operazioneLezioneInCorso.set(false);
+        this.chiudiModificaLezione();
+        this.ok('Lezione aggiornata.');
+        this.caricaLezioni();
+        if (this.clienteSelezionato()) this.caricaPrenotazioni(this.clienteSelezionato()!.id);
+      },
+      error: error => { this.operazioneLezioneInCorso.set(false); this.fail(error); },
+    });
+  }
+
+  annullaLezione(lezione: Lezione): void {
+    if (this.operazioneLezioneInCorso() || !window.confirm(`Annullare la lezione ${lezione.nomeCorso}? Anche le prenotazioni confermate saranno annullate.`)) return;
+    this.errore.set('');
+    this.operazioneLezioneInCorso.set(true);
+    this.api.annullaLezione(lezione.id).subscribe({
+      next: () => {
+        this.operazioneLezioneInCorso.set(false);
+        if (this.lezioneInModifica()?.id === lezione.id) this.chiudiModificaLezione();
+        this.ok('Lezione annullata.');
+        this.caricaLezioni();
+        if (this.clienteSelezionato()) this.caricaPrenotazioni(this.clienteSelezionato()!.id);
+      },
+      error: error => { this.operazioneLezioneInCorso.set(false); this.fail(error); },
+    });
   }
 
   prenota(lezione: Lezione): void {

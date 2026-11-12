@@ -856,6 +856,27 @@ textarea {
     grid-template-columns: 1fr 60px 1.2fr 84px 104px;
 }
 
+.booking-section .lesson-row:has(.lesson-actions) {
+    grid-template-columns: 1fr 60px 1.2fr 84px minmax(230px, auto);
+}
+
+.lesson-actions,
+.lesson-edit-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.lesson-edit {
+    padding: 16px 0;
+    border-bottom: 1px solid #c5c7be;
+}
+
+.lesson-edit-actions {
+    align-items: end;
+}
+
 .booking-row {
     grid-template-columns: .8fr 56px 1.2fr 1.1fr 105px 84px !important;
 }
