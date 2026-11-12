@@ -1,0 +1,1 @@
+ALTER TABLE agenda_corsi ADD COLUMN modificata_manualmente BOOLEAN NOT NULL DEFAULT FALSE;

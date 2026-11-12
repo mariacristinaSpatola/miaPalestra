@@ -54,6 +54,9 @@ public class AgendaCorsi {
     @Column(nullable = false, length = 20)
     private OccurrenceStatus status;
 
+    @Column(name = "modificata_manualmente", nullable = false)
+    private boolean modificataManualmente;
+
     protected AgendaCorsi() {
     }
 
@@ -102,6 +105,47 @@ public class AgendaCorsi {
         return status;
     }
 
+    public boolean isModificataManualmente() {
+        return modificataManualmente;
+    }
+
+    public void modifica(LocalTime startTime, int durataMinuti, int capacity, long prenotazioniConfermate,
+            LocalDateTime richiestaIl) {
+        verificaModificabilita(richiestaIl, startTime);
+        if (startTime == null || durataMinuti < 1 || durataMinuti > 21 * 60
+                || startTime.toNanoOfDay() + durataMinuti * 60_000_000_000L > LocalTime.of(21, 0).toNanoOfDay()) {
+            throw new RegolaDominioNonValidaException(
+                    "La durata deve essere positiva e la lezione deve terminare entro le 21:00.");
+        }
+        if (capacity < 1 || capacity < prenotazioniConfermate) {
+            throw new RegolaDominioNonValidaException(
+                    "La capienza deve essere almeno pari alle prenotazioni confermate.");
+        }
+        this.startTime = startTime;
+        this.durataMinuti = durataMinuti;
+        this.capacity = capacity;
+        this.modificataManualmente = true;
+    }
+
+    public void annulla(LocalDateTime richiestaIl) {
+        verificaModificabilita(richiestaIl, null);
+        annulla();
+    }
+
+    private void verificaModificabilita(LocalDateTime richiestaIl, LocalTime nuovaOra) {
+        if (status != OccurrenceStatus.SCHEDULED) {
+            throw new RegolaDominioNonValidaException("È possibile gestire solo una lezione programmata.");
+        }
+        if (richiestaIl == null) {
+            throw new RegolaDominioNonValidaException("La data della richiesta è obbligatoria.");
+        }
+        if (!lessonDate.atTime(startTime).isAfter(richiestaIl)
+                || (nuovaOra != null && !lessonDate.atTime(nuovaOra).isAfter(richiestaIl))) {
+            throw new RegolaDominioNonValidaException(
+                    "È possibile gestire solo lezioni che non sono ancora iniziate.");
+        }
+    }
+
     public void verificaPrenotabilita(LocalDateTime richiestaIl) {
         if (status != OccurrenceStatus.SCHEDULED) {
             throw new RegolaDominioNonValidaException("Non è possibile prenotare una lezione annullata.");
@@ -132,7 +176,7 @@ public class AgendaCorsi {
     }
 
     public boolean riconciliaProgramma(long prenotazioniConfermate) {
-        if (haConflittoConProgramma() && prenotazioniConfermate == 0) {
+        if (!modificataManualmente && haConflittoConProgramma() && prenotazioniConfermate == 0) {
             annulla();
             return true;
         }

@@ -5,6 +5,7 @@ import it.gym.Prenotazioni.exception.EmailGiaEsistenteException;
 import it.gym.Prenotazioni.exception.AccessoNonAutorizzatoException;
 import it.gym.Prenotazioni.exception.CorsoGiaEsistenteException;
 import it.gym.Prenotazioni.exception.CorsoNonTrovatoException;
+import it.gym.Prenotazioni.exception.LezioneNonTrovataException;
 import it.gym.Prenotazioni.exception.MiaPalestraException;
 import it.gym.Prenotazioni.exception.ProgrammaSettimanaleNonTrovatoException;
 import it.gym.Prenotazioni.exception.UtenteGiaEsistenteException;
@@ -26,7 +27,8 @@ public class ErroreController {
         return errore(HttpStatus.NOT_FOUND, exception.getMessage());
     }
 
-    @ExceptionHandler({ CorsoNonTrovatoException.class, ProgrammaSettimanaleNonTrovatoException.class })
+    @ExceptionHandler({ CorsoNonTrovatoException.class, ProgrammaSettimanaleNonTrovatoException.class,
+            LezioneNonTrovataException.class })
     public ResponseEntity<Map<String, String>> risorsaNonTrovata(MiaPalestraException exception) {
         return errore(HttpStatus.NOT_FOUND, exception.getMessage());
     }

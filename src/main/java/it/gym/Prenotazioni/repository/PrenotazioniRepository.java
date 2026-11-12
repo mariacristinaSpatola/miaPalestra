@@ -16,5 +16,7 @@ public interface PrenotazioniRepository extends JpaRepository<Prenotazioni, Long
 
     long countByOccurrenceIdAndStatus(Long occurrenceId, PrenotazioniStatus status);
 
+    List<Prenotazioni> findByOccurrenceIdAndStatus(Long occurrenceId, PrenotazioniStatus status);
+
     Optional<Prenotazioni> findByCustomerIdAndOccurrenceId(Long customerId, Long occurrenceId);
 }

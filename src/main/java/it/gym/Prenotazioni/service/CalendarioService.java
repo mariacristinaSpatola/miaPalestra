@@ -4,6 +4,7 @@ import it.gym.Prenotazioni.entity.AgendaCorsi;
 import it.gym.Prenotazioni.entity.PeriodoCalendario;
 import it.gym.Prenotazioni.enums.OccurrenceStatus;
 import it.gym.Prenotazioni.enums.PrenotazioniStatus;
+import it.gym.Prenotazioni.exception.LezioneNonTrovataException;
 import it.gym.Prenotazioni.exception.RegolaDominioNonValidaException;
 import it.gym.Prenotazioni.repository.AgendaCorsiRepository;
 import it.gym.Prenotazioni.repository.CorsiRepository;
@@ -52,16 +53,25 @@ public class CalendarioService {
             throw new RegolaDominioNonValidaException("Selezionare un intervallo da 1 a 63 giorni.");
         }
         return agenda.findByLessonDateBetweenOrderByLessonDateAscStartTimeAsc(dal, al).stream()
-                .map(lezione -> new LezioneRisposta(lezione.getId(),
-                        lezione.getProgrammaSettimanale().getCorso().getId(),
-                        lezione.getProgrammaSettimanale().getCorso().getName(), lezione.getLessonDate(),
-                        lezione.getStartTime(), lezione.getCapacity(), Math.max(0, lezione.getCapacity()
-                                - prenotazioni.countByOccurrenceIdAndStatus(lezione.getId(),
-                                        PrenotazioniStatus.CONFIRMED)),
-                        lezione.getStatus(), lezione.scadenzaOperazioni(),
-                        lezione.operazioniConsentite(LocalDateTime.now(clock)), lezione.haConflittoConProgramma(),
-                        lezione.getDurataMinuti()))
+                .map(this::dettaglio)
                 .toList();
+    }
+
+    @Transactional
+    public LezioneRisposta modificaLezione(Long lezioneId, LocalTime ora, int durataMinuti, int capienza) {
+        AgendaCorsi lezione = trovaLezioneConBlocco(lezioneId);
+        long confermate = prenotazioni.countByOccurrenceIdAndStatus(lezioneId, PrenotazioniStatus.CONFIRMED);
+        lezione.modifica(ora, durataMinuti, capienza, confermate, LocalDateTime.now(clock));
+        return dettaglio(lezione);
+    }
+
+    @Transactional
+    public void annullaLezione(Long lezioneId) {
+        AgendaCorsi lezione = trovaLezioneConBlocco(lezioneId);
+        LocalDateTime annullataIl = LocalDateTime.now(clock);
+        lezione.annulla(annullataIl);
+        prenotazioni.findByOccurrenceIdAndStatus(lezioneId, PrenotazioniStatus.CONFIRMED)
+                .forEach(prenotazione -> prenotazione.cancella(annullataIl));
     }
 
     @Transactional
@@ -97,5 +107,22 @@ public class CalendarioService {
             }
         }
         return new PubblicazioneRisposta(dal, periodo.ultimoGiorno(), create, annullate, List.copyOf(conflitti));
+    }
+
+    private LezioneRisposta dettaglio(AgendaCorsi lezione) {
+        long confermate = prenotazioni.countByOccurrenceIdAndStatus(lezione.getId(), PrenotazioniStatus.CONFIRMED);
+        return new LezioneRisposta(lezione.getId(), lezione.getProgrammaSettimanale().getCorso().getId(),
+                lezione.getProgrammaSettimanale().getCorso().getName(), lezione.getLessonDate(),
+                lezione.getStartTime(), lezione.getCapacity(), Math.max(0, lezione.getCapacity() - confermate),
+                lezione.getStatus(), lezione.scadenzaOperazioni(),
+                lezione.operazioniConsentite(LocalDateTime.now(clock)), lezione.haConflittoConProgramma(),
+                lezione.getDurataMinuti());
+    }
+
+    private AgendaCorsi trovaLezioneConBlocco(Long lezioneId) {
+        if (lezioneId == null) {
+            throw new RegolaDominioNonValidaException("La lezione è obbligatoria.");
+        }
+        return agenda.findByIdForUpdate(lezioneId).orElseThrow(LezioneNonTrovataException::new);
     }
 }

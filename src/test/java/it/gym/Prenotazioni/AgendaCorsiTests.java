@@ -38,6 +38,51 @@ class AgendaCorsiTests {
         }
 
         @Test
+        void modificaLaLezioneEConservaLaPersonalizzazioneAllaRiconciliazione() {
+                ProgrammaSettimanale programma = programma();
+                AgendaCorsi lezione = new AgendaCorsi(programma, LUNEDI, LocalTime.of(9, 0), 10);
+
+                lezione.modifica(LocalTime.of(20, 30), 30, 2, 2,
+                                LUNEDI.minusDays(1).atTime(12, 0));
+                programma.disattiva();
+
+                assertEquals(LocalTime.of(20, 30), lezione.getStartTime());
+                assertEquals(30, lezione.getDurataMinuti());
+                assertEquals(2, lezione.getCapacity());
+                assertTrue(lezione.isModificataManualmente());
+                assertFalse(lezione.riconciliaProgramma(0));
+                assertEquals(it.gym.Prenotazioni.enums.OccurrenceStatus.SCHEDULED, lezione.getStatus());
+        }
+
+        @Test
+        void rifiutaCapienzaInferioreAlleConfermeERestringeLaFineAlleVentuno() {
+                AgendaCorsi lezione = new AgendaCorsi(programma(), LUNEDI, LocalTime.of(9, 0), 10);
+
+                assertThrows(MiaPalestraException.class,
+                                () -> lezione.modifica(LocalTime.of(18, 0), 60, 1, 2,
+                                                LUNEDI.minusDays(1).atTime(12, 0)));
+                assertThrows(MiaPalestraException.class,
+                                () -> lezione.modifica(LocalTime.of(20, 31), 30, 2, 0,
+                                                LUNEDI.minusDays(1).atTime(12, 0)));
+                assertEquals(LocalTime.of(9, 0), lezione.getStartTime());
+                assertEquals(10, lezione.getCapacity());
+        }
+
+        @Test
+        void rifiutaModificheDopoInizioOLaSpostamentoAdUnOraGiaTrascorsa() {
+                AgendaCorsi lezione = new AgendaCorsi(programma(), LUNEDI, LocalTime.of(9, 0), 10);
+
+                assertThrows(MiaPalestraException.class,
+                                () -> lezione.modifica(LocalTime.of(10, 0), 45, 10, 0,
+                                                LUNEDI.atTime(9, 0)));
+                assertThrows(MiaPalestraException.class,
+                                () -> lezione.modifica(LocalTime.of(8, 30), 45, 10, 0,
+                                                LUNEDI.atTime(8, 31)));
+                assertEquals(LocalTime.of(9, 0), lezione.getStartTime());
+                assertEquals(60, lezione.getDurataMinuti());
+        }
+
+        @Test
         void rifiutaOccorrenzeInDateNonValidePerProgrammiDisattivatiECorsiInattivi() {
                 Corsi corso = new Corsi("Yoga", null);
                 ProgrammaSettimanale programma = new ProgrammaSettimanale(corso, 1, LocalTime.of(9, 0), 10, LUNEDI,
