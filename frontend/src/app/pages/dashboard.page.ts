@@ -4,7 +4,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthApi } from '../core/auth.api';
-import { Corso, Lezione, Prenotazione, Programma, Utente } from '../core/models';
+import { Corso, IscrittoLezione, Lezione, Prenotazione, Programma, Utente } from '../core/models';
 import { PalestraApi } from '../core/palestra.api';
 
 @Component({
@@ -84,6 +84,22 @@ import { PalestraApi } from '../core/palestra.api';
               </form>
             }
           } @empty { <p class="empty-state">Nessuna lezione disponibile nel periodo pubblicato.</p> }</div>
+          @if (user()?.role === 'ADMIN' || user()?.role === 'SECRETARY') {
+            @if (iscrittiLezione(); as iscritti) {
+              <section class="manage-panel lesson-registrants" aria-label="Iscritti interessati dalla lezione">
+                <p class="eyebrow">ISCRITTI INTERESSATI</p><h2>{{ rosterDopoAnnullamento() ? 'Lezione annullata' : 'Lezione aggiornata' }}</h2>
+                @if (iscritti.length > 0) {
+                  <div class="manage-list">@for (iscritto of iscritti; track $index) {
+                    <div class="manage-row"><span><strong>{{ iscritto.nome }} {{ iscritto.cognome }}</strong>
+                      @if (iscritto.telefono || iscritto.email) {
+                        <small>@if (iscritto.telefono) { <a [href]="'tel:' + iscritto.telefono">{{ iscritto.telefono }}</a> } @if (iscritto.email) { <a [href]="'mailto:' + iscritto.email">{{ iscritto.email }}</a> }</small>
+                      } @else { <small>Contatto non disponibile.</small> }
+                    </span></div>
+                  }</div>
+                } @else { <p class="empty-state">Nessun iscritto confermato per questa lezione.</p> }
+              </section>
+            }
+          }
         </section>
       }
 
@@ -109,6 +125,8 @@ export class DashboardPage implements OnInit {
   readonly clienteSelezionato = signal<Utente | null>(null);
   readonly utenteInModifica = signal<Utente | null>(null);
   readonly lezioneInModifica = signal<Lezione | null>(null);
+  readonly iscrittiLezione = signal<IscrittoLezione[] | null>(null);
+  readonly rosterDopoAnnullamento = signal(false);
   readonly operazioneLezioneInCorso = signal(false);
   readonly errore = signal('');
   readonly messaggio = signal('');
@@ -229,6 +247,8 @@ export class DashboardPage implements OnInit {
   }
 
   iniziaModificaLezione(lezione: Lezione): void {
+    this.iscrittiLezione.set(null);
+    this.rosterDopoAnnullamento.set(false);
     this.lezioneInModifica.set(lezione);
     this.modificaLezione = { ora: lezione.ora.slice(0, 5), durataMinuti: lezione.durataMinuti, capienza: lezione.capienza };
   }
@@ -241,8 +261,10 @@ export class DashboardPage implements OnInit {
     this.errore.set('');
     this.operazioneLezioneInCorso.set(true);
     this.api.modificaLezione(lezione.id, this.modificaLezione).subscribe({
-      next: () => {
+      next: risposta => {
         this.operazioneLezioneInCorso.set(false);
+        this.iscrittiLezione.set(risposta.iscritti);
+        this.rosterDopoAnnullamento.set(false);
         this.chiudiModificaLezione();
         this.ok('Lezione aggiornata.');
         this.caricaLezioni();
@@ -255,10 +277,14 @@ export class DashboardPage implements OnInit {
   annullaLezione(lezione: Lezione): void {
     if (this.operazioneLezioneInCorso() || !window.confirm(`Annullare la lezione ${lezione.nomeCorso}? Anche le prenotazioni confermate saranno annullate.`)) return;
     this.errore.set('');
+    this.iscrittiLezione.set(null);
+    this.rosterDopoAnnullamento.set(false);
     this.operazioneLezioneInCorso.set(true);
     this.api.annullaLezione(lezione.id).subscribe({
-      next: () => {
+      next: risposta => {
         this.operazioneLezioneInCorso.set(false);
+        this.iscrittiLezione.set(risposta.iscritti);
+        this.rosterDopoAnnullamento.set(true);
         if (this.lezioneInModifica()?.id === lezione.id) this.chiudiModificaLezione();
         this.ok('Lezione annullata.');
         this.caricaLezioni();

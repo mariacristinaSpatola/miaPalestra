@@ -2,6 +2,7 @@ package it.gym.Prenotazioni.service;
 
 import it.gym.Prenotazioni.entity.AgendaCorsi;
 import it.gym.Prenotazioni.entity.PeriodoCalendario;
+import it.gym.Prenotazioni.entity.Prenotazioni;
 import it.gym.Prenotazioni.enums.OccurrenceStatus;
 import it.gym.Prenotazioni.enums.PrenotazioniStatus;
 import it.gym.Prenotazioni.exception.LezioneNonTrovataException;
@@ -40,7 +41,11 @@ public class CalendarioService {
 
     public record LezioneRisposta(Long id, Long corsoId, String nomeCorso, LocalDate data, LocalTime ora,
             int capienza, long postiDisponibili, OccurrenceStatus stato, LocalDateTime scadenza,
-            boolean operazioniConsentite, boolean conflittoProgramma, int durataMinuti) {
+            boolean operazioniConsentite, boolean conflittoProgramma, int durataMinuti,
+            List<IscrittoRisposta> iscritti) {
+    }
+
+    public record IscrittoRisposta(String nome, String cognome, String telefono, String email) {
     }
 
     public record PubblicazioneRisposta(LocalDate dal, LocalDate al, int create, int annullate,
@@ -53,25 +58,28 @@ public class CalendarioService {
             throw new RegolaDominioNonValidaException("Selezionare un intervallo da 1 a 63 giorni.");
         }
         return agenda.findByLessonDateBetweenOrderByLessonDateAscStartTimeAsc(dal, al).stream()
-                .map(this::dettaglio)
+                .map(lezione -> dettaglio(lezione, List.of()))
                 .toList();
     }
 
     @Transactional
     public LezioneRisposta modificaLezione(Long lezioneId, LocalTime ora, int durataMinuti, int capienza) {
         AgendaCorsi lezione = trovaLezioneConBlocco(lezioneId);
-        long confermate = prenotazioni.countByOccurrenceIdAndStatus(lezioneId, PrenotazioniStatus.CONFIRMED);
-        lezione.modifica(ora, durataMinuti, capienza, confermate, LocalDateTime.now(clock));
-        return dettaglio(lezione);
+        List<IscrittoRisposta> iscritti = trovaIscrittiConfermati(lezioneId);
+        lezione.modifica(ora, durataMinuti, capienza, iscritti.size(), LocalDateTime.now(clock));
+        return dettaglio(lezione, iscritti);
     }
 
     @Transactional
-    public void annullaLezione(Long lezioneId) {
+    public LezioneRisposta annullaLezione(Long lezioneId) {
         AgendaCorsi lezione = trovaLezioneConBlocco(lezioneId);
         LocalDateTime annullataIl = LocalDateTime.now(clock);
+        List<Prenotazioni> confermate = prenotazioni.findByOccurrenceIdAndStatus(
+                lezioneId, PrenotazioniStatus.CONFIRMED);
+        List<IscrittoRisposta> iscritti = confermate.stream().map(this::dettaglioIscritto).toList();
         lezione.annulla(annullataIl);
-        prenotazioni.findByOccurrenceIdAndStatus(lezioneId, PrenotazioniStatus.CONFIRMED)
-                .forEach(prenotazione -> prenotazione.cancella(annullataIl));
+        confermate.forEach(prenotazione -> prenotazione.cancella(annullataIl));
+        return dettaglio(lezione, iscritti);
     }
 
     @Transactional
@@ -109,14 +117,26 @@ public class CalendarioService {
         return new PubblicazioneRisposta(dal, periodo.ultimoGiorno(), create, annullate, List.copyOf(conflitti));
     }
 
-    private LezioneRisposta dettaglio(AgendaCorsi lezione) {
+    private LezioneRisposta dettaglio(AgendaCorsi lezione, List<IscrittoRisposta> iscritti) {
         long confermate = prenotazioni.countByOccurrenceIdAndStatus(lezione.getId(), PrenotazioniStatus.CONFIRMED);
         return new LezioneRisposta(lezione.getId(), lezione.getProgrammaSettimanale().getCorso().getId(),
                 lezione.getProgrammaSettimanale().getCorso().getName(), lezione.getLessonDate(),
                 lezione.getStartTime(), lezione.getCapacity(), Math.max(0, lezione.getCapacity() - confermate),
                 lezione.getStatus(), lezione.scadenzaOperazioni(),
                 lezione.operazioniConsentite(LocalDateTime.now(clock)), lezione.haConflittoConProgramma(),
-                lezione.getDurataMinuti());
+                lezione.getDurataMinuti(), iscritti);
+    }
+
+    private List<IscrittoRisposta> trovaIscrittiConfermati(Long lezioneId) {
+        return prenotazioni.findByOccurrenceIdAndStatus(lezioneId, PrenotazioniStatus.CONFIRMED).stream()
+                .map(this::dettaglioIscritto)
+                .toList();
+    }
+
+    private IscrittoRisposta dettaglioIscritto(Prenotazioni prenotazione) {
+        var cliente = prenotazione.getCustomer();
+        return new IscrittoRisposta(cliente.getFirstName(), cliente.getLastName(),
+                cliente.getPhone(), cliente.getEmail());
     }
 
     private AgendaCorsi trovaLezioneConBlocco(Long lezioneId) {

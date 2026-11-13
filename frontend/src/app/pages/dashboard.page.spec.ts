@@ -24,7 +24,14 @@ describe('DashboardPage', () => {
     beforeEach(() => registerLocaleData(localeIt));
 
     it('permette alla segreteria di modificare una lezione e aggiorna la lista', async () => {
-        const aggiornata = { ...lezione, ora: '19:00:00', durataMinuti: 45, capienza: 10 };
+        const aggiornata = {
+            ...lezione, ora: '19:00:00', durataMinuti: 45, capienza: 10,
+            iscritti: [
+                { nome: 'Ada', cognome: 'Rossi', telefono: '3331234567', email: null },
+                { nome: 'Grace', cognome: 'Hopper', telefono: null, email: 'grace@example.com' },
+                { nome: 'Alan', cognome: 'Turing', telefono: null, email: null },
+            ],
+        };
         const lezioni = vi.fn().mockReturnValueOnce(of([lezione])).mockReturnValue(of([aggiornata]));
         const modificaLezione = vi.fn(() => of(aggiornata));
         TestBed.configureTestingModule({
@@ -50,7 +57,44 @@ describe('DashboardPage', () => {
         expect(modificaLezione).toHaveBeenCalledWith(12, { ora: '19:00', durataMinuti: 45, capienza: 10 });
         expect(fixture.componentInstance.lezioni()[0]).toEqual(aggiornata);
         expect(fixture.componentInstance.lezioneInModifica()).toBeNull();
+        expect(fixture.componentInstance.iscrittiLezione()).toEqual(aggiornata.iscritti);
         expect(lezioni).toHaveBeenCalledTimes(2);
+        fixture.detectChanges();
+        const box = fixture.nativeElement.querySelector('.lesson-registrants') as HTMLElement;
+        expect(box.textContent).toContain('Ada Rossi');
+        expect(box.textContent).toContain('3331234567');
+        expect(box.textContent).toContain('Grace Hopper');
+        expect(box.textContent).toContain('grace@example.com');
+        expect(box.textContent).toContain('Alan Turing');
+        expect(box.textContent).not.toContain('null');
+        expect(box.textContent).not.toContain('—');
+    });
+
+    it('mostra il box roster vuoto dopo una modifica senza prenotazioni confermate', async () => {
+        const aggiornata = { ...lezione, ora: '19:00:00', iscritti: [] };
+        TestBed.configureTestingModule({
+            imports: [DashboardPage],
+            providers: [provideRouter([]),
+            { provide: AuthApi, useValue: { user: signal(segretaria), loadCurrent: () => of(segretaria) } },
+            {
+                provide: PalestraApi,
+                useValue: {
+                    lezioni: vi.fn().mockReturnValueOnce(of([lezione])).mockReturnValue(of([aggiornata])),
+                    modificaLezione: vi.fn(() => of(aggiornata)),
+                },
+            },
+            ],
+        });
+        const fixture = TestBed.createComponent(DashboardPage);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.componentInstance.iniziaModificaLezione(lezione);
+        fixture.componentInstance.salvaLezione();
+        fixture.detectChanges();
+
+        const box = fixture.nativeElement.querySelector('.lesson-registrants') as HTMLElement;
+        expect(box).not.toBeNull();
+        expect(box.textContent).toContain('Nessun iscritto confermato per questa lezione.');
     });
 
     it('mantiene aperta la modifica quando il backend rifiuta i dati', async () => {
@@ -74,7 +118,12 @@ describe('DashboardPage', () => {
 
     it('annulla la lezione solo dopo conferma e aggiorna le prenotazioni del cliente selezionato', async () => {
         const lezioni = vi.fn().mockReturnValueOnce(of([lezione])).mockReturnValue(of([]));
-        const annullaLezione = vi.fn(() => of(undefined));
+        const rispostaAnnullamento = {
+            ...lezione,
+            stato: 'CANCELLED' as const,
+            iscritti: [{ nome: 'Ada', cognome: 'Rossi', telefono: '3331234567', email: null }],
+        };
+        const annullaLezione = vi.fn(() => of(rispostaAnnullamento));
         const prenotazioni = vi.fn(() => of([]));
         const conferma = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
         TestBed.configureTestingModule({
@@ -94,7 +143,11 @@ describe('DashboardPage', () => {
         expect(conferma).toHaveBeenCalledWith(expect.stringContaining('prenotazioni confermate'));
         expect(annullaLezione).toHaveBeenCalledWith(12);
         expect(fixture.componentInstance.lezioni()).toEqual([]);
+        expect(fixture.componentInstance.iscrittiLezione()).toEqual(rispostaAnnullamento.iscritti);
         expect(prenotazioni).toHaveBeenCalledWith(8);
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.lesson-registrants')?.textContent).toContain('Ada Rossi');
+        expect(fixture.nativeElement.querySelector('.lesson-registrants')?.textContent).toContain('3331234567');
         conferma.mockRestore();
     });
 
