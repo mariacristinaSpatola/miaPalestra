@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Corso, Lezione, Prenotazione, Programma, Utente } from './models';
+import { Corso, Lezione, LezioneConIscritti, Prenotazione, Programma, Utente } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class PalestraApi {
@@ -14,11 +14,11 @@ export class PalestraApi {
     }
 
     modificaLezione(id: number, payload: { ora: string; durataMinuti: number; capienza: number }) {
-        return this.http.put<Lezione>(`/api/calendario/lezioni/${id}`, payload, { withCredentials: true });
+        return this.http.put<LezioneConIscritti>(`/api/calendario/lezioni/${id}`, payload, { withCredentials: true });
     }
 
     annullaLezione(id: number) {
-        return this.http.post<void>(`/api/calendario/lezioni/${id}/annulla`, null, { withCredentials: true });
+        return this.http.post<LezioneConIscritti>(`/api/calendario/lezioni/${id}/annulla`, null, { withCredentials: true });
     }
 
     prenotazioni(clienteId?: number) {

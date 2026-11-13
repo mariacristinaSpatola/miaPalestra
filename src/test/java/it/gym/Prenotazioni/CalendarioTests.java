@@ -131,6 +131,88 @@ class CalendarioTests {
     }
 
     @Test
+    void modificareLezioneRestituisceSoloIscrittiConfermatiDellaLezioneConContattiDisponibili() {
+        calendario.pubblica(inizio);
+        var lezioni = agenda.findByLessonDateBetweenOrderByLessonDateAscStartTimeAsc(inizio, inizio.plusDays(7));
+        var lezioneInteressata = lezioni.getFirst();
+        var altraLezione = lezioni.getLast();
+        var conTelefono = cliente("Ada", "Rossi", null, "3331234567");
+        var conEmail = cliente("Grace", "Hopper", "grace@example.com", null);
+        var senzaContatti = cliente("Alan", "Turing", null, null);
+        var prenotazioneAnnullata = cliente("Sofia", "Lovelace", "sofia@example.com", null);
+        var prenotazioneAltraLezione = cliente("Katherine", "Johnson", null, "3339876543");
+        prenotazioni.save(new Prenotazioni(conTelefono, lezioneInteressata, PrenotazioniStatus.CONFIRMED,
+                PrenotazioniChannel.WEB, null));
+        prenotazioni.save(new Prenotazioni(conEmail, lezioneInteressata, PrenotazioniStatus.CONFIRMED,
+                PrenotazioniChannel.SECRETARY, null));
+        prenotazioni.save(new Prenotazioni(senzaContatti, lezioneInteressata, PrenotazioniStatus.CONFIRMED,
+                PrenotazioniChannel.CHATBOT, null));
+        prenotazioni.save(new Prenotazioni(prenotazioneAnnullata, lezioneInteressata, PrenotazioniStatus.CANCELLED,
+                PrenotazioniChannel.WEB, null));
+        prenotazioni.save(new Prenotazioni(prenotazioneAltraLezione, altraLezione, PrenotazioniStatus.CONFIRMED,
+                PrenotazioniChannel.WEB, null));
+
+        var risultato = calendario.modificaLezione(lezioneInteressata.getId(), LocalTime.of(19, 0), 60, 4);
+
+        assertEquals(19, risultato.ora().getHour());
+        assertEquals(3, risultato.iscritti().size());
+        assertEquals(java.util.Set.of(
+                new CalendarioService.IscrittoRisposta("Ada", "Rossi", "3331234567", null),
+                new CalendarioService.IscrittoRisposta("Grace", "Hopper", null, "grace@example.com"),
+                new CalendarioService.IscrittoRisposta("Alan", "Turing", null, null)),
+                java.util.Set.copyOf(risultato.iscritti()));
+    }
+
+    @Test
+    void annullareLezioneCatturaPrimaGliIscrittiConfermatiDellaSolaLezioneInteressata() {
+        calendario.pubblica(inizio);
+        var lezioni = agenda.findByLessonDateBetweenOrderByLessonDateAscStartTimeAsc(inizio, inizio.plusDays(7));
+        var lezioneInteressata = lezioni.getFirst();
+        var altraLezione = lezioni.getLast();
+        var iscritto = cliente("Ada", "Rossi", "ada@example.com", null);
+        var giaAnnullato = cliente("Grace", "Hopper", null, "3331234567");
+        var iscrittoAltraLezione = cliente("Alan", "Turing", null, "3339876543");
+        var prenotazioneConfermata = prenotazioni.save(new Prenotazioni(iscritto, lezioneInteressata,
+                PrenotazioniStatus.CONFIRMED, PrenotazioniChannel.WEB, null));
+        prenotazioni.save(new Prenotazioni(giaAnnullato, lezioneInteressata, PrenotazioniStatus.CANCELLED,
+                PrenotazioniChannel.WEB, null));
+        prenotazioni.save(new Prenotazioni(iscrittoAltraLezione, altraLezione, PrenotazioniStatus.CONFIRMED,
+                PrenotazioniChannel.WEB, null));
+
+        var risultato = calendario.annullaLezione(lezioneInteressata.getId());
+
+        assertEquals(java.util.List.of(new CalendarioService.IscrittoRisposta(
+                "Ada", "Rossi", null, "ada@example.com")), risultato.iscritti());
+        assertEquals(PrenotazioniStatus.CANCELLED, prenotazioneConfermata.getStatus());
+        assertEquals(OccurrenceStatus.CANCELLED, lezioneInteressata.getStatus());
+    }
+
+    @Test
+    void endpointAnnullamentoRestituisceLaLezioneEIlRosterPrimaDellaCancellazione() throws Exception {
+        calendario.pubblica(inizio);
+        var lezioni = agenda.findByLessonDateBetweenOrderByLessonDateAscStartTimeAsc(inizio, inizio.plusDays(7));
+        var lezioneInteressata = lezioni.getFirst();
+        var altraLezione = lezioni.getLast();
+        prenotazioni.save(new Prenotazioni(cliente("Ada", "Rossi", "ada@example.com", null), lezioneInteressata,
+                PrenotazioniStatus.CONFIRMED, PrenotazioniChannel.WEB, null));
+        prenotazioni.save(new Prenotazioni(cliente("Grace", "Hopper", null, "3331234567"), altraLezione,
+                PrenotazioniStatus.CONFIRMED, PrenotazioniChannel.WEB, null));
+        Sessione segreteria = autentica(UserRole.SECRETARY);
+
+        http.perform(post("/api/calendario/lezioni/" + lezioneInteressata.getId() + "/annulla")
+                .session(segreteria.sessione())
+                .header("X-CSRF-TOKEN", tokenCsrf(segreteria.sessione())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(lezioneInteressata.getId()))
+                .andExpect(jsonPath("$.stato").value("CANCELLED"))
+                .andExpect(jsonPath("$.iscritti.length()").value(1))
+                .andExpect(jsonPath("$.iscritti[0].nome").value("Ada"))
+                .andExpect(jsonPath("$.iscritti[0].cognome").value("Rossi"))
+                .andExpect(jsonPath("$.iscritti[0].email").value("ada@example.com"))
+                .andExpect(jsonPath("$.iscritti[0].telefono").doesNotExist());
+    }
+
+    @Test
     void adminESegreteriaModificanoLeLezioniMaClienteENonAutenticatoSonoRifiutati() throws Exception {
         var lezione = agenda.save(new AgendaCorsi(programma, inizio, LocalTime.of(18, 0), 2));
         Sessione admin = autentica(UserRole.ADMIN);
@@ -148,7 +230,8 @@ class CalendarioTests {
         http.perform(post("/api/calendario/lezioni/" + lezione.getId() + "/annulla")
                 .session(segreteria.sessione())
                 .header("X-CSRF-TOKEN", tokenCsrf(segreteria.sessione())))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.iscritti.length()").value(0));
 
         http.perform(put("/api/calendario/lezioni/" + lezione.getId())
                 .session(cliente.sessione())
@@ -205,6 +288,11 @@ class CalendarioTests {
     private Utenti cliente() {
         return utenti.save(new Utenti("cliente-" + UUID.randomUUID(), "hash-test", "Nome", "Cliente",
                 null, null, UserRole.CUSTOMER));
+    }
+
+    private Utenti cliente(String nome, String cognome, String email, String telefono) {
+        return utenti.save(new Utenti("cliente-" + UUID.randomUUID(), "hash-test", nome, cognome,
+                email, telefono, UserRole.CUSTOMER));
     }
 
     private Sessione autentica(UserRole ruolo) throws Exception {

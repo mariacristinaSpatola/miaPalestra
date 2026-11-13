@@ -31,6 +31,17 @@ export interface Lezione {
     conflittoProgramma: boolean;
 }
 
+export interface LezioneConIscritti extends Lezione {
+    iscritti: IscrittoLezione[];
+}
+
+export interface IscrittoLezione {
+    nome: string;
+    cognome: string;
+    telefono: string | null;
+    email: string | null;
+}
+
 export interface Prenotazione {
     id: number;
     clienteId: number;
