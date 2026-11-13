@@ -785,6 +785,39 @@ textarea {
     border-top: 1px solid var(--line);
 }
 
+.registrant-table-wrap {
+    overflow-x: auto;
+}
+
+.registrant-table {
+    width: 100%;
+    min-width: 520px;
+    border-collapse: collapse;
+    font-size: 12px;
+    text-align: left;
+}
+
+.registrant-table th,
+.registrant-table td {
+    border-bottom: 1px solid var(--line);
+    padding: 11px 12px;
+}
+
+.registrant-table thead th {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.registrant-table tbody th {
+    font-weight: 700;
+}
+
+.registrant-table a {
+    overflow-wrap: anywhere;
+}
+
 .publish-panel {
     grid-column: 1 / -1;
 }

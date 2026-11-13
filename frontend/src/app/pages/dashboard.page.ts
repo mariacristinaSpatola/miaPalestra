@@ -89,13 +89,18 @@ import { PalestraApi } from '../core/palestra.api';
               <section class="manage-panel lesson-registrants" aria-label="Iscritti interessati dalla lezione">
                 <p class="eyebrow">ISCRITTI INTERESSATI</p><h2>{{ rosterDopoAnnullamento() ? 'Lezione annullata' : 'Lezione aggiornata' }}</h2>
                 @if (iscritti.length > 0) {
-                  <div class="manage-list">@for (iscritto of iscritti; track $index) {
-                    <div class="manage-row"><span><strong>{{ iscritto.nome }} {{ iscritto.cognome }}</strong>
-                      @if (iscritto.telefono || iscritto.email) {
-                        <small>@if (iscritto.telefono) { <a [href]="'tel:' + iscritto.telefono">{{ iscritto.telefono }}</a> } @if (iscritto.email) { <a [href]="'mailto:' + iscritto.email">{{ iscritto.email }}</a> }</small>
-                      } @else { <small>Contatto non disponibile.</small> }
-                    </span></div>
-                  }</div>
+                  <div class="registrant-table-wrap">
+                    <table class="registrant-table" aria-label="Iscritti interessati dalla lezione">
+                      <thead><tr><th scope="col">Nome</th><th scope="col">Telefono</th><th scope="col">Email</th></tr></thead>
+                      <tbody>@for (iscritto of iscritti; track $index) {
+                        <tr>
+                          <th scope="row">{{ iscritto.nome }} {{ iscritto.cognome }}</th>
+                          <td>@if (iscritto.telefono) { <a [href]="'tel:' + iscritto.telefono">{{ iscritto.telefono }}</a> } @else { <span aria-label="Non disponibile">—</span> }</td>
+                          <td>@if (iscritto.email) { <a [href]="'mailto:' + iscritto.email">{{ iscritto.email }}</a> } @else { <span aria-label="Non disponibile">—</span> }</td>
+                        </tr>
+                      }</tbody>
+                    </table>
+                  </div>
                 } @else { <p class="empty-state">Nessun iscritto confermato per questa lezione.</p> }
               </section>
             }

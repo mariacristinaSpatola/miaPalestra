@@ -67,7 +67,7 @@ describe('DashboardPage', () => {
         expect(box.textContent).toContain('grace@example.com');
         expect(box.textContent).toContain('Alan Turing');
         expect(box.textContent).not.toContain('null');
-        expect(box.textContent).not.toContain('—');
+        expect(box.textContent).toContain('—');
     });
 
     it('mostra il box roster vuoto dopo una modifica senza prenotazioni confermate', async () => {
@@ -121,7 +121,10 @@ describe('DashboardPage', () => {
         const rispostaAnnullamento = {
             ...lezione,
             stato: 'CANCELLED' as const,
-            iscritti: [{ nome: 'Ada', cognome: 'Rossi', telefono: '3331234567', email: null }],
+            iscritti: [
+                { nome: 'Ada', cognome: 'Rossi', telefono: '3331234567', email: null },
+                { nome: 'Luca', cognome: 'Bianchi', telefono: null, email: 'luca@example.com' },
+            ],
         };
         const annullaLezione = vi.fn(() => of(rispostaAnnullamento));
         const prenotazioni = vi.fn(() => of([]));
@@ -146,8 +149,17 @@ describe('DashboardPage', () => {
         expect(fixture.componentInstance.iscrittiLezione()).toEqual(rispostaAnnullamento.iscritti);
         expect(prenotazioni).toHaveBeenCalledWith(8);
         fixture.detectChanges();
-        expect(fixture.nativeElement.querySelector('.lesson-registrants')?.textContent).toContain('Ada Rossi');
-        expect(fixture.nativeElement.querySelector('.lesson-registrants')?.textContent).toContain('3331234567');
+        const tabella = fixture.nativeElement.querySelector('.lesson-registrants table');
+        expect(Array.from(tabella.querySelectorAll('thead th')).map((cella: any) => cella.textContent.trim()))
+            .toEqual(['Nome', 'Telefono', 'Email']);
+        const righe = Array.from(tabella.querySelectorAll('tbody tr')) as HTMLElement[];
+        expect(righe).toHaveLength(2);
+        expect(righe[0].textContent).toContain('Ada Rossi');
+        expect(righe[0].querySelector('a[href="tel:3331234567"]')?.textContent).toBe('3331234567');
+        expect(righe[0].textContent).toContain('—');
+        expect(righe[1].textContent).toContain('Luca Bianchi');
+        expect(righe[1].textContent).toContain('—');
+        expect(righe[1].querySelector('a[href="mailto:luca@example.com"]')?.textContent).toBe('luca@example.com');
         conferma.mockRestore();
     });
 
