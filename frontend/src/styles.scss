@@ -744,9 +744,45 @@ textarea {
     font-size: 12px;
 }
 
+.dashboard-tabs {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--line);
+}
+
+.dashboard-tabs button {
+    flex: 0 0 auto;
+    padding: 12px 16px;
+    border: 1px solid transparent;
+    border-bottom: 0;
+    border-radius: 6px 6px 0 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font: inherit;
+}
+
+.dashboard-tabs button.active {
+    border-color: var(--line);
+    background: var(--white);
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.dashboard-tabs button:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -3px;
+}
+
+.dashboard [hidden] {
+    display: none !important;
+}
+
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 20px;
 }
 

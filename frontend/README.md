@@ -24,6 +24,8 @@ Il proxy locale mantiene l'header `Host` originale (`changeOrigin: false`), cosi
 
 I clienti possono registrarsi dalla pagina di accesso; il backend assegna sempre il ruolo `CUSTOMER`. Per il primo accesso, creare l'amministratore seguendo la procedura di bootstrap nel README della root. L'amministratore crea gli account di segreteria.
 
+Nell'area riservata le operazioni sono organizzate in schede: Lezioni e Prenotazioni per tutti, con Utenti, Corsi e programmi e Pubblicazione disponibili all'amministratore. Per segreteria e amministratore la selezione del cliente rimane disponibile nelle schede Lezioni e Prenotazioni.
+
 ## Verifica
 
 ```powershell

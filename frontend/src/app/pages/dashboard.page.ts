@@ -7,6 +7,8 @@ import { AuthApi } from '../core/auth.api';
 import { Corso, IscrittoLezione, Lezione, Prenotazione, Programma, Utente } from '../core/models';
 import { PalestraApi } from '../core/palestra.api';
 
+type SchedaDashboard = 'utenti' | 'corsi' | 'pubblicazione' | 'lezioni' | 'prenotazioni';
+
 @Component({
   selector: 'app-dashboard-page',
   imports: [DatePipe, FormsModule],
@@ -19,9 +21,21 @@ import { PalestraApi } from '../core/palestra.api';
       @if (messaggio()) { <p class="notice" role="status">{{ messaggio() }}</p> }
       @if (errore()) { <p class="form-error" role="alert">{{ errore() }}</p> }
 
+      @if (user()) {
+        <nav class="dashboard-tabs" aria-label="Sezioni dell'area riservata">
+          @if (user()?.role === 'ADMIN') {
+            <button type="button" [class.active]="schedaAttiva() === 'utenti'" [attr.aria-pressed]="schedaAttiva() === 'utenti'" (click)="schedaAttiva.set('utenti')">Utenti</button>
+            <button type="button" [class.active]="schedaAttiva() === 'corsi'" [attr.aria-pressed]="schedaAttiva() === 'corsi'" (click)="schedaAttiva.set('corsi')">Corsi e programmi</button>
+            <button type="button" [class.active]="schedaAttiva() === 'pubblicazione'" [attr.aria-pressed]="schedaAttiva() === 'pubblicazione'" (click)="schedaAttiva.set('pubblicazione')">Pubblicazione</button>
+          }
+          <button type="button" [class.active]="schedaAttiva() === 'lezioni'" [attr.aria-pressed]="schedaAttiva() === 'lezioni'" (click)="schedaAttiva.set('lezioni')">Lezioni</button>
+          <button type="button" [class.active]="schedaAttiva() === 'prenotazioni'" [attr.aria-pressed]="schedaAttiva() === 'prenotazioni'" (click)="schedaAttiva.set('prenotazioni')">Prenotazioni</button>
+        </nav>
+      }
+
       @if (user()?.role === 'ADMIN') {
-        <div class="dashboard-grid">
-          <section class="manage-panel"><p class="eyebrow">01 / UTENTI</p><h2>{{ utenteInModifica() ? 'Modifica account' : 'Crea un account' }}</h2>
+        <div class="dashboard-grid" [hidden]="schedaAttiva() === 'lezioni' || schedaAttiva() === 'prenotazioni'">
+          <section class="manage-panel" [hidden]="schedaAttiva() !== 'utenti'"><p class="eyebrow">01 / UTENTI</p><h2>{{ utenteInModifica() ? 'Modifica account' : 'Crea un account' }}</h2>
             <form (ngSubmit)="creaUtente()" class="form-grid">
               <label>Username<input name="username" [(ngModel)]="nuovoUtente.username" minlength="3" [readonly]="!!utenteInModifica()" required></label>
               <label>{{ utenteInModifica() ? 'Nuova password (opzionale)' : 'Password iniziale' }}<input name="password" [(ngModel)]="nuovoUtente.password" type="password" minlength="8" [required]="!utenteInModifica()"></label>
@@ -35,7 +49,7 @@ import { PalestraApi } from '../core/palestra.api';
             </form>
             <div class="manage-list"><p class="eyebrow">ACCOUNT ESISTENTI</p>@for (account of utenti(); track account.id) { <div class="manage-row"><span><strong>{{ account.firstName }} {{ account.lastName }}</strong><small>{{ account.username }} · {{ account.role }}</small></span><button class="small-action" type="button" [disabled]="account.id === user()?.id" (click)="account.active ? disattivaUtente(account) : riattivaUtente(account)">{{ account.active ? 'Disattiva' : 'Riattiva' }}</button></div> }</div>
           </section>
-          <section class="manage-panel"><p class="eyebrow">02 / CATALOGO</p><h2>Aggiungi un corso</h2>
+          <section class="manage-panel" [hidden]="schedaAttiva() !== 'corsi'"><p class="eyebrow">02 / CATALOGO</p><h2>Aggiungi un corso</h2>
             <form (ngSubmit)="creaCorso()" class="form-grid">
               <label class="wide">Nome corso<input name="courseName" [(ngModel)]="nuovoCorso.nome" required maxlength="100"></label>
               <label class="wide">Descrizione<textarea name="courseDescription" [(ngModel)]="nuovoCorso.descrizione" rows="3" maxlength="1000"></textarea></label>
@@ -54,7 +68,7 @@ import { PalestraApi } from '../core/palestra.api';
             </form>
             <div class="manage-list"><p class="eyebrow">PROGRAMMI SETTIMANALI</p>@for (programma of programmi(); track programma.id) { <div class="manage-row"><span><strong>{{ programma.nomeCorso }} · {{ nomeGiorno(programma.giorno) }} {{ programma.ora.slice(0, 5) }}</strong><small>Dal {{ programma.validoDal }}{{ programma.validoAl ? ' al ' + programma.validoAl : '' }} · {{ programma.capienzaPredefinita }} posti</small></span><button class="small-action" type="button" [disabled]="!programma.attivo" (click)="disattivaProgramma(programma)">Disattiva</button></div> }</div>
           </section>
-          <section class="manage-panel publish-panel"><p class="eyebrow">04 / PUBBLICAZIONE</p><h2>Calendario 30 giorni solari</h2>
+          <section class="manage-panel publish-panel" [hidden]="schedaAttiva() !== 'pubblicazione'"><p class="eyebrow">04 / PUBBLICAZIONE</p><h2>Calendario 30 giorni solari</h2>
             <form (ngSubmit)="pubblica()" class="inline-form"><label>Primo giorno<input name="publishFrom" [(ngModel)]="dal" type="date" required></label><button class="button button-accent" type="submit">Pubblica <span aria-hidden="true">↗</span></button></form>
             <p class="helper-text">La pubblicazione genera le lezioni datate per i 30 giorni consecutivi a partire dalla data scelta.</p>
           </section>
@@ -62,7 +76,7 @@ import { PalestraApi } from '../core/palestra.api';
       }
 
       @if (user()?.role === 'SECRETARY' || user()?.role === 'ADMIN') {
-        <section class="manage-panel secretary-panel"><p class="eyebrow">GESTIONE CLIENTI</p><h2>Trova un cliente</h2>
+        <section class="manage-panel secretary-panel" [hidden]="schedaAttiva() !== 'lezioni' && schedaAttiva() !== 'prenotazioni'"><p class="eyebrow">GESTIONE CLIENTI</p><h2>Trova un cliente</h2>
           <form class="inline-form" (ngSubmit)="cercaClienti()"><label>Nome, cognome o email<input name="query" [(ngModel)]="queryClienti"></label><button class="button button-dark" type="submit">Cerca <span aria-hidden="true">⌕</span></button></form>
           @if (clienti().length) { <div class="client-list">@for (cliente of clienti(); track cliente.id) { <button type="button" class="client-option" [class.selected]="clienteSelezionato()?.id === cliente.id" (click)="selezionaCliente(cliente)"><strong>{{ cliente.firstName }} {{ cliente.lastName }}</strong><span>{{ cliente.email || cliente.username }}</span></button> }</div> }
           @if (clienteSelezionato()) { <p class="selected-client">Cliente selezionato: <strong>{{ clienteSelezionato()?.firstName }} {{ clienteSelezionato()?.lastName }}</strong></p> }
@@ -70,7 +84,7 @@ import { PalestraApi } from '../core/palestra.api';
       }
 
       @if (user()?.role === 'CUSTOMER' || user()?.role === 'SECRETARY' || user()?.role === 'ADMIN') {
-        <section class="booking-section"><div class="section-heading"><div><p class="eyebrow">PRENOTA UN POSTO</p><h2>Lezioni <span>disponibili</span></h2></div><span class="schedule-note">{{ user()?.role === 'CUSTOMER' ? 'I posti si aggiornano dopo la conferma.' : 'Seleziona un cliente per prenotare.' }}</span></div>
+        <section class="booking-section" [hidden]="schedaAttiva() !== 'lezioni'"><div class="section-heading"><div><p class="eyebrow">PRENOTA UN POSTO</p><h2>Lezioni <span>disponibili</span></h2></div><span class="schedule-note">{{ user()?.role === 'CUSTOMER' ? 'I posti si aggiornano dopo la conferma.' : 'Seleziona un cliente per prenotare.' }}</span></div>
           <div class="lesson-list">@for (lezione of lezioni(); track lezione.id) {
             <div class="lesson-row"><span>{{ lezione.data | date:'EEE d MMM':'':'it' }}</span><strong>{{ lezione.ora.slice(0, 5) }}</strong><b>{{ lezione.nomeCorso }}</b><span>{{ lezione.postiDisponibili }} posti</span><div class="lesson-actions"><button class="small-action" type="button" [disabled]="!lezione.operazioniConsentite || !lezione.postiDisponibili || (user()?.role !== 'CUSTOMER' && !clienteSelezionato())" (click)="prenota(lezione)">Prenota</button>
               @if (user()?.role === 'ADMIN' || user()?.role === 'SECRETARY') { <button class="small-action" type="button" [disabled]="operazioneLezioneInCorso()" (click)="iniziaModificaLezione(lezione)">Modifica</button><button class="small-action cancel-action" type="button" [disabled]="operazioneLezioneInCorso()" (click)="annullaLezione(lezione)">Annulla lezione</button> }
@@ -109,7 +123,7 @@ import { PalestraApi } from '../core/palestra.api';
       }
 
       @if (user()) {
-        <section class="booking-section"><div class="section-heading"><div><p class="eyebrow">IL TUO POSTO È QUI</p><h2>{{ user()?.role === 'CUSTOMER' ? 'Le mie' : 'Prenotazioni cliente' }} <span>prenotazioni</span></h2></div><button class="text-link" type="button" (click)="caricaPrenotazioni()">Ricarica <span aria-hidden="true">↻</span></button></div>
+        <section class="booking-section" [hidden]="schedaAttiva() !== 'prenotazioni'"><div class="section-heading"><div><p class="eyebrow">IL TUO POSTO È QUI</p><h2>{{ user()?.role === 'CUSTOMER' ? 'Le mie' : 'Prenotazioni cliente' }} <span>prenotazioni</span></h2></div><button class="text-link" type="button" (click)="caricaPrenotazioni()">Ricarica <span aria-hidden="true">↻</span></button></div>
           <div class="lesson-list">@for (booking of prenotazioni(); track booking.id) { <div class="lesson-row booking-row"><span>{{ booking.data | date:'EEE d MMM':'':'it' }}</span><strong>{{ booking.ora.slice(0, 5) }}</strong><b>{{ booking.nomeCorso }}</b>@if (user()?.role !== 'CUSTOMER') { <span>{{ booking.nomeCliente }}</span> }<span class="lesson-status" [class.full]="booking.stato === 'CANCELLED'">{{ booking.stato === 'CONFIRMED' ? 'CONFERMATA' : 'CANCELLATA' }}</span><button class="small-action cancel-action" type="button" [disabled]="!booking.cancellabile" (click)="cancella(booking)">Annulla</button></div> } @empty { <p class="empty-state">Nessuna prenotazione trovata.</p> }</div>
         </section>
       }
@@ -121,6 +135,7 @@ export class DashboardPage implements OnInit {
   private readonly api = inject(PalestraApi);
   private readonly router = inject(Router);
   readonly user = this.auth.user;
+  readonly schedaAttiva = signal<SchedaDashboard>('lezioni');
   readonly corsi = signal<Corso[]>([]);
   readonly programmi = signal<Programma[]>([]);
   readonly utenti = signal<Utente[]>([]);

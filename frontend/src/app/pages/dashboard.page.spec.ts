@@ -23,6 +23,100 @@ describe('DashboardPage', () => {
 
     beforeEach(() => registerLocaleData(localeIt));
 
+    it('mostra le schede amministrative e conserva i dati inseriti cambiando scheda', async () => {
+        const admin: Utente = { ...segretaria, role: 'ADMIN' };
+        TestBed.configureTestingModule({
+            imports: [DashboardPage],
+            providers: [
+                provideRouter([]),
+                { provide: AuthApi, useValue: { user: signal(admin), loadCurrent: () => of(admin) } },
+                { provide: PalestraApi, useValue: { lezioni: () => of([]), corsi: () => of([]), programmi: () => of([]), utenti: () => of([]) } },
+            ],
+        });
+        const fixture = TestBed.createComponent(DashboardPage);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        const pulsanti = Array.from(fixture.nativeElement.querySelectorAll('.dashboard-tabs button')) as HTMLButtonElement[];
+        expect(pulsanti.map(p => p.textContent?.trim())).toEqual(['Utenti', 'Corsi e programmi', 'Pubblicazione', 'Lezioni', 'Prenotazioni']);
+        expect(pulsanti[3].getAttribute('aria-pressed')).toBe('true');
+
+        pulsanti[0].click();
+        fixture.detectChanges();
+        const input = fixture.nativeElement.querySelector('input[name="username"]') as HTMLInputElement;
+        input.value = 'nuovo-utente';
+        input.dispatchEvent(new Event('input'));
+        fixture.detectChanges();
+        expect(input.closest('section')?.hidden).toBe(false);
+        expect(pulsanti[0].getAttribute('aria-pressed')).toBe('true');
+
+        pulsanti[1].click();
+        fixture.detectChanges();
+        expect(input.closest('section')?.hidden).toBe(true);
+        expect((fixture.nativeElement.querySelector('input[name="courseName"]') as HTMLInputElement).closest('section')?.hidden).toBe(false);
+        pulsanti[2].click();
+        fixture.detectChanges();
+        expect((fixture.nativeElement.querySelector('input[name="publishFrom"]') as HTMLInputElement).closest('section')?.hidden).toBe(false);
+        pulsanti[0].click();
+        fixture.detectChanges();
+        expect(input.value).toBe('nuovo-utente');
+    });
+
+    it('mantiene il cliente selezionato passando dalle lezioni alle prenotazioni', async () => {
+        const cliente: Utente = { ...segretaria, id: 8, role: 'CUSTOMER' };
+        const prenotazioni = vi.fn(() => of([]));
+        TestBed.configureTestingModule({
+            imports: [DashboardPage],
+            providers: [
+                provideRouter([]),
+                { provide: AuthApi, useValue: { user: signal(segretaria), loadCurrent: () => of(segretaria) } },
+                { provide: PalestraApi, useValue: { lezioni: () => of([lezione]), prenotazioni, clienti: () => of([cliente]) } },
+            ],
+        });
+        const fixture = TestBed.createComponent(DashboardPage);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.componentInstance.cercaClienti();
+        fixture.detectChanges();
+        (fixture.nativeElement.querySelector('.client-option') as HTMLButtonElement).click();
+        fixture.detectChanges();
+        const schede = Array.from(fixture.nativeElement.querySelectorAll('.dashboard-tabs button')) as HTMLButtonElement[];
+        expect(schede.map(p => p.textContent?.trim())).toEqual(['Lezioni', 'Prenotazioni']);
+        schede[1].click();
+        fixture.detectChanges();
+        const sezioni = fixture.nativeElement.querySelectorAll('.booking-section') as NodeListOf<HTMLElement>;
+        expect(sezioni[0].hidden).toBe(true);
+        expect(sezioni[1].hidden).toBe(false);
+        expect((fixture.nativeElement.querySelector('.secretary-panel') as HTMLElement).hidden).toBe(false);
+        expect(fixture.nativeElement.querySelector('.selected-client').textContent).toContain('Ada Rossi');
+        expect(prenotazioni).toHaveBeenCalledWith(cliente.id);
+        schede[0].click();
+        fixture.detectChanges();
+        expect(fixture.componentInstance.clienteSelezionato()).toEqual(cliente);
+        expect(sezioni[0].hidden).toBe(false);
+    });
+
+    it('mostra al cliente solo le schede lezioni e prenotazioni', async () => {
+        const cliente: Utente = { ...segretaria, role: 'CUSTOMER' };
+        TestBed.configureTestingModule({
+            imports: [DashboardPage],
+            providers: [
+                provideRouter([]),
+                { provide: AuthApi, useValue: { user: signal(cliente), loadCurrent: () => of(cliente) } },
+                { provide: PalestraApi, useValue: { lezioni: () => of([]), prenotazioni: () => of([]) } },
+            ],
+        });
+        const fixture = TestBed.createComponent(DashboardPage);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        const schede = Array.from(fixture.nativeElement.querySelectorAll('.dashboard-tabs button')) as HTMLButtonElement[];
+        expect(schede.map(p => p.textContent?.trim())).toEqual(['Lezioni', 'Prenotazioni']);
+        schede[1].click();
+        fixture.detectChanges();
+        expect(schede[1].getAttribute('aria-pressed')).toBe('true');
+        expect((fixture.nativeElement.querySelectorAll('.booking-section')[1] as HTMLElement).hidden).toBe(false);
+        expect(fixture.nativeElement.querySelector('.secretary-panel')).toBeNull();
+    });
+
     it('permette alla segreteria di modificare una lezione e aggiorna la lista', async () => {
         const aggiornata = {
             ...lezione, ora: '19:00:00', durataMinuti: 45, capienza: 10,
